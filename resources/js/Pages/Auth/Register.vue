@@ -1,113 +1,108 @@
 <script setup>
-import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import GuestLayout from '@/Layouts/GuestLayout.vue'
+import InputError from '@/Components/InputError.vue'
+import PrimaryButton from '@/Components/PrimaryButton.vue'
+import { Head, Link, useForm } from '@inertiajs/vue3'
 
 const form = useForm({
-    name: '',
-    email: '',
-    password: '',
-    password_confirmation: '',
-});
+  name: '',
+  email: '',
+  password: '',
+  password_confirmation: '',
+  agree: false,
+})
 
 const submit = () => {
-    form.post(route('register'), {
-        onFinish: () => form.reset('password', 'password_confirmation'),
-    });
-};
+  form.post(route('register'), {
+    onFinish: () => form.reset('password', 'password_confirmation'),
+  })
+}
 </script>
 
 <template>
-    <GuestLayout>
-        <Head title="Register" />
+  <GuestLayout>
+    <Head title="Регистрация" />
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="name" value="Name" />
+    <div class="max-w-md w-full mx-auto bg-white p-8 rounded-2xl shadow-lg">
+      <h1 class="text-3xl font-bold text-center mb-6">Регистрация</h1>
 
-                <TextInput
-                    id="name"
-                    type="text"
-                    class="mt-1 block w-full"
-                    v-model="form.name"
-                    required
-                    autofocus
-                    autocomplete="name"
-                />
+      <form @submit.prevent="submit" class="space-y-4">
+        <!-- Почта -->
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Почта</label>
+          <input
+            id="email"
+            type="email"
+            v-model="form.email"
+            required
+            class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <InputError class="mt-1" :message="form.errors.email" />
+        </div>
 
-                <InputError class="mt-2" :message="form.errors.name" />
-            </div>
+        <!-- Логин -->
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Логин</label>
+          <input
+            id="name"
+            type="text"
+            v-model="form.name"
+            required
+            class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <InputError class="mt-1" :message="form.errors.name" />
+        </div>
 
-            <div class="mt-4">
-                <InputLabel for="email" value="Email" />
+        <!-- Пароль -->
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
+          <input
+            id="password"
+            type="password"
+            v-model="form.password"
+            required
+            class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <InputError class="mt-1" :message="form.errors.password" />
+        </div>
 
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autocomplete="username"
-                />
+        <!-- Повторите пароль -->
+        <div>
+          <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Повторите пароль</label>
+          <input
+            id="password_confirmation"
+            type="password"
+            v-model="form.password_confirmation"
+            required
+            class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <InputError class="mt-1" :message="form.errors.password_confirmation" />
+        </div>
 
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
+        <!-- Чекбокс согласия -->
+        <div class="flex items-center">
+          <input
+            id="agree"
+            type="checkbox"
+            v-model="form.agree"
+            class="h-4 w-4 text-blue-600 border-gray-300 rounded"
+          />
+          <label for="agree" class="ml-2 block text-sm text-gray-700">
+            Я согласен на обработку персональных данных
+          </label>
+        </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+        <!-- Кнопка и ссылка -->
+        <div class="flex items-center justify-between mt-4">
+          <Link href="/login" class="text-sm text-blue-600 hover:underline">
+            Уже зарегистрированы?
+          </Link>
 
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel
-                    for="password_confirmation"
-                    value="Confirm Password"
-                />
-
-                <TextInput
-                    id="password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError
-                    class="mt-2"
-                    :message="form.errors.password_confirmation"
-                />
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <Link
-                    :href="route('login')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                >
-                    Already registered?
-                </Link>
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Register
-                </PrimaryButton>
-            </div>
-        </form>
-    </GuestLayout>
+          <PrimaryButton :disabled="form.processing || !form.agree">
+            Зарегистрироваться
+          </PrimaryButton>
+        </div>
+      </form>
+    </div>
+  </GuestLayout>
 </template>
