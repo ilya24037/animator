@@ -1,0 +1,8 @@
+// Общие переменные и миксины
+$card-gap: 24px !default;
+
+@mixin grid-columns($cols) {
+  display: grid;
+  grid-template-columns: repeat($cols, 1fr);
+  gap: $card-gap;
+}

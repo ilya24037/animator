@@ -1,0 +1,12 @@
+.cards {
+  &__container {
+    @include grid-columns(4);
+
+    @media (max-width: 1023px) {
+      @include grid-columns(2);
+    }
+    @media (max-width: 639px) {
+      @include grid-columns(1);
+    }
+  }
+}

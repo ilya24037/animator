@@ -1,0 +1,9 @@
+// resources/scss/_variables.scss
+
+// Здесь будут ваши переменные и миксины
+$card-gap: 24px;
+@mixin grid-columns($c) {
+  display: grid;
+  grid-template-columns: repeat($c, 1fr);
+  gap: $card-gap;
+}
