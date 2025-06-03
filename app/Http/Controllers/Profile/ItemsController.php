@@ -1,43 +1,30 @@
 namespace App\Http\Controllers\Profile;
 
 use App\Http\Controllers\Controller;
+use App\Models\Animator;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ItemsController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Примерные данные, потом заменишь на Eloquent запросы из БД
-        $pending = [
-            [
-                'id' => 1,
-                'title' => 'Массаж спины',
-                'price' => '3000 ₽ за сеанс',
-                'lifetime' => 'Ожидает подтверждения',
-                'imageUrl' => null,
-                'editUrl' => '/additem?draftId=1'
-            ],
-        ];
-        $drafts = [
-            [
-                'id' => 2,
-                'title' => 'Детский праздник',
-                'price' => null,
-                'lifetime' => 'Удалится навсегда через 10 дней',
-                'imageUrl' => null,
-                'editUrl' => '/additem?draftId=2'
-            ]
-        ];
-        $archive = [
-            [
-                'id' => 3,
-                'title' => 'Новый год для малышей',
-                'price' => 'Цена договорная',
-                'lifetime' => 'Перемещён в архив',
-                'imageUrl' => null,
-                'editUrl' => '/additem?draftId=3'
-            ]
-        ];
+        $userId = $request->user()->id;
+
+        $pending = Animator::where('user_id', $userId)
+                          ->where('status', 'pending')
+                          ->orderBy('updated_at', 'desc')
+                          ->get();
+
+        $drafts = Animator::where('user_id', $userId)
+                          ->where('status', 'draft')
+                          ->orderBy('updated_at', 'desc')
+                          ->get();
+
+        $archive = Animator::where('user_id', $userId)
+                          ->where('status', 'archive')
+                          ->orderBy('updated_at', 'desc')
+                          ->get();
 
         return Inertia::render('Personal/Items', [
             'pending' => $pending,
