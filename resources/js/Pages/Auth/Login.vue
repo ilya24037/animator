@@ -7,90 +7,76 @@ import TextInput from '@/Components/TextInput.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 
 const form = useForm({
-  name: '',
   email: '',
   password: '',
-  password_confirmation: '',
+  remember: false,
 })
 
 const submit = () => {
-  form.post(route('register'), {
-    onFinish: () => form.reset('password', 'password_confirmation'),
+  form.post(route('login'), {
+    onFinish: () => form.reset('password'),
   })
 }
 </script>
 
 <template>
   <GuestLayout>
-    <Head title="Register" />
+    <Head title="Вход" />
 
-    <form @submit.prevent="submit" class="mt-8 space-y-6">
-      <!-- ЛОГИН -->
-      <div>
-        <InputLabel for="name" value="Логин" />
-        <TextInput
-          id="name"
-          type="text"
-          v-model="form.name"
-          required
-          autofocus
-          class="mt-1 block w-full"
-          autocomplete="name"
-        />
-        <InputError class="mt-2" :message="form.errors.name" />
-      </div>
+    <div class="w-full max-w-md mx-auto mt-16 bg-white rounded-2xl shadow-xl p-8">
+      <h1 class="text-2xl font-bold mb-8 text-center">Вход в аккаунт</h1>
+      <form @submit.prevent="submit" class="space-y-6">
+        <div>
+          <label for="email" class="block mb-1 text-gray-700 font-medium">Email</label>
+          <TextInput
+            id="email"
+            type="email"
+            v-model="form.email"
+            required
+            autofocus
+            autocomplete="username"
+            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring focus:border-blue-500"
+          />
+          <InputError :message="form.errors.email" class="mt-2" />
+        </div>
 
-      <!-- EMAIL -->
-      <div>
-        <InputLabel for="email" value="Email" />
-        <TextInput
-          id="email"
-          type="email"
-          v-model="form.email"
-          required
-          class="mt-1 block w-full"
-          autocomplete="username"
-        />
-        <InputError class="mt-2" :message="form.errors.email" />
-      </div>
+        <div>
+          <label for="password" class="block mb-1 text-gray-700 font-medium">Пароль</label>
+          <TextInput
+            id="password"
+            type="password"
+            v-model="form.password"
+            required
+            autocomplete="current-password"
+            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring focus:border-blue-500"
+          />
+          <InputError :message="form.errors.password" class="mt-2" />
+        </div>
 
-      <!-- ПАРОЛЬ -->
-      <div>
-        <InputLabel for="password" value="Пароль" />
-        <TextInput
-          id="password"
-          type="password"
-          v-model="form.password"
-          required
-          class="mt-1 block w-full"
-          autocomplete="new-password"
-        />
-        <InputError class="mt-2" :message="form.errors.password" />
-      </div>
+        <div class="flex items-center justify-between text-sm">
+          <label class="flex items-center select-none">
+            <input type="checkbox" v-model="form.remember" class="mr-2 rounded" />Запомнить меня
+          </label>
+          <Link
+            :href="route('password.request')"
+            class="text-blue-600 hover:underline"
+          >
+            Забыли пароль?
+          </Link>
+        </div>
 
-      <!-- ПОДТВЕРЖДЕНИЕ ПАРОЛЯ -->
-      <div>
-        <InputLabel for="password_confirmation" value="Подтвердите пароль" />
-        <TextInput
-          id="password_confirmation"
-          type="password"
-          v-model="form.password_confirmation"
-          required
-          class="mt-1 block w-full"
-          autocomplete="new-password"
-        />
-        <InputError class="mt-2" :message="form.errors.password_confirmation" />
-      </div>
-
-      <!-- КНОПКА -->
-      <div class="flex items-center justify-between mt-6">
-        <Link href="/login" class="text-sm text-blue-600 hover:underline">
-          Уже зарегистрированы?
-        </Link>
-        <PrimaryButton :disabled="form.processing">
-          Зарегистрироваться
+        <PrimaryButton
+          class="w-full py-3 mt-4 rounded-lg font-bold bg-blue-600 text-white hover:bg-blue-700 transition"
+          :class="{ 'opacity-25': form.processing }"
+          :disabled="form.processing"
+        >
+          Войти
         </PrimaryButton>
+      </form>
+      <div class="mt-8 text-center text-sm text-gray-500">
+        Нет аккаунта?
+        <Link :href="route('register')" class="text-blue-600 hover:underline">Зарегистрироваться</Link>
       </div>
-    </form>
+    </div>
   </GuestLayout>
 </template>
