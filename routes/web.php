@@ -23,6 +23,16 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 
+Route::middleware(['auth', 'verified'])
+    ->prefix('profile')
+    ->name('profile.')
+    ->group(function () {
+        Route::get('/items', [\App\Http\Controllers\Profile\ItemsController::class, 'index'])
+            ->name('items');
+        Route::patch('/items/{item}/status', [\App\Http\Controllers\Profile\ItemsController::class, 'updateStatus']);
+    });
+
+
 // --- Laravel Breeze маршруты --- //
 
 // Регистрация

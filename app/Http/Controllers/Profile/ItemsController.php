@@ -4,38 +4,43 @@ namespace App\Http\Controllers\Profile;
 
 use App\Http\Controllers\Controller;
 use App\Models\Item;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class ItemsController extends Controller
 {
-    /**
-     * Отображает страницу "Мои объявления"
-     */
-    public function index(): Response
+    public function index(Request $request)
     {
-        $user = Auth::user();
+        $status = $request->query('status', Item::STATUS_WAITING);
 
-        // Загружаем объявления пользователя по статусам
-        $pendingItems = Item::where('user_id', $user->id)
-            ->where('status', 'pending')
-            ->get();
+        $items = Item::where('user_id', $request->user()->id)
+            ->status($status)
+            ->latest('updated_at')
+            ->paginate(20)
+            ->withQueryString();
 
-        $draftItems = Item::where('user_id', $user->id)
-            ->where('status', 'draft')
-            ->get();
+        $counts = Item::selectRaw('status, count(*) as total')
+            ->where('user_id', $request->user()->id)
+            ->groupBy('status')
+            ->pluck('total', 'status');
 
-        $archivedItems = Item::where('user_id', $user->id)
-            ->where('status', 'archived')
-            ->get();
-
-        // Передаём данные в компонент Vue (Profile/Items.vue)
         return Inertia::render('Profile/Items', [
-            'pending' => $pendingItems,
-            'drafts' => $draftItems,
-            'archive' => $archivedItems,
+            'items'         => $items,
+            'counts'        => $counts,
+            'currentStatus' => $status,
         ]);
     }
-}
 
+    public function updateStatus(Request $request, Item $item)
+    {
+        $this->authorize('update', $item);
+
+        $request->validate([
+            'status' => 'required|in:draft,waiting,archived,active',
+        ]);
+
+        $item->update(['status' => $request->input('status')]);
+
+        return back()->with('flash', ['message' => 'Статус объявления обновлён!']);
+    }
+}
