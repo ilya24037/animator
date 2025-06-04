@@ -1,35 +1,41 @@
+<?php
+
 namespace App\Http\Controllers\Profile;
 
 use App\Http\Controllers\Controller;
-use App\Models\Animator;
-use Illuminate\Http\Request;
+use App\Models\Item;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ItemsController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Отображает страницу "Мои объявления"
+     */
+    public function index(): Response
     {
-        $userId = $request->user()->id;
+        $user = Auth::user();
 
-        $pending = Animator::where('user_id', $userId)
-                          ->where('status', 'pending')
-                          ->orderBy('updated_at', 'desc')
-                          ->get();
+        // Загружаем объявления пользователя по статусам
+        $pendingItems = Item::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->get();
 
-        $drafts = Animator::where('user_id', $userId)
-                          ->where('status', 'draft')
-                          ->orderBy('updated_at', 'desc')
-                          ->get();
+        $draftItems = Item::where('user_id', $user->id)
+            ->where('status', 'draft')
+            ->get();
 
-        $archive = Animator::where('user_id', $userId)
-                          ->where('status', 'archive')
-                          ->orderBy('updated_at', 'desc')
-                          ->get();
+        $archivedItems = Item::where('user_id', $user->id)
+            ->where('status', 'archived')
+            ->get();
 
-        return Inertia::render('Personal/Items', [
-            'pending' => $pending,
-            'drafts'  => $drafts,
-            'archive' => $archive,
+        // Передаём данные в компонент Vue (Profile/Items.vue)
+        return Inertia::render('Profile/Items', [
+            'pending' => $pendingItems,
+            'drafts' => $draftItems,
+            'archive' => $archivedItems,
         ]);
     }
 }
+
