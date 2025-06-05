@@ -40,7 +40,7 @@ defineOptions({ layout: AppLayout })
           <h3 class="font-semibold">Скидки и акции</h3>
           <p class="text-sm text-gray-600">настройте для покупателей</p>
         </div>
-        <button class="btn btn-primary">Хочу попробовать</button>
+        <button class="btn btn-primary">Хочу !!! попробовать</button>
       </div>
 
       <!-- Табы -->

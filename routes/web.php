@@ -6,7 +6,7 @@ use Inertia\Inertia;
 /* ─────────── Контроллеры ─────────── */
 use App\Http\Controllers\AnimatorController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Profile\ItemsController; // ← исправлено
+use App\Http\Controllers\Profile\ItemsController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
@@ -33,10 +33,14 @@ Route::middleware('auth')->group(function () {
     Route::patch ('/profile',  [ProfileController::class, 'update' ])->name('profile.update');
     Route::delete('/profile',  [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    /* список объявлений ⇢ route('profile.items', {status?})   */
+    /* список объявлений */
     Route::get('/profile/items/{status?}', [ItemsController::class, 'index'])
         ->where('status', 'draft|pending|published')
-        ->name('profile.items'); // ← исправлено
+        ->name('profile.items');
+
+    /* создание и публикация объявления */
+    Route::get ('/animators/create', [AnimatorController::class, 'create'])->name('animators.create');
+    Route::post('/animators',        [AnimatorController::class, 'store' ])->name('animators.store');
 });
 
 /* ─────────── Auth (Breeze / Fortify) ─────────── */
