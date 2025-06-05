@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Animator;
 use Illuminate\Support\Facades\File;
-use Inertia\Inertia;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class AnimatorController extends Controller
 {
@@ -25,7 +25,7 @@ class AnimatorController extends Controller
     {
         $query = Animator::query();
 
-        // Применяем фильтры по параметрам запроса (как было)
+        // Применяем фильтры из запроса
         if (request()->filled('city')) {
             $query->where('city', request('city'));
         }
@@ -45,7 +45,7 @@ class AnimatorController extends Controller
             $query->where('type', request('type'));
         }
 
-        // Получаем карточки и собираем пути к картинкам (как было)
+        // Подготавливаем каждую карточку (коллекцию изображений)
         $cards = $query->get()->map(function ($card) {
             $imageDir = public_path("images/cards/{$card->id}");
             $images = [];
@@ -81,58 +81,49 @@ class AnimatorController extends Controller
      */
     public function create()
     {
-        // На выходе будем передавать flash-сообщение successMessage (если оно есть)
-        return Inertia::render('Animators/Create', [
-            // Если с прошлого запроса в сессии лежит 'success', Inertia отдаст его во Vue
-            'successMessage' => session('success'),
-        ]);
+        return Inertia::render('Animators/Create');
     }
 
     /**
-     * Сохранить новое объявление (либо опубликовать, либо сохранить как черновик)
+     * Сохранить новое объявление (либо черновик, либо опубликовать)
      */
     public function store(Request $request)
     {
-        /*
-         * 1) Поскольку форма отправляет вложенный массив:
-         *    - form.details.title
-         *    - form.details.description
-         *    - form.price.value
-         *    - form.geo.city
-         *    - form.status
-         *
-         *   то валифицируем именно dot-нотацией:
-         */
+        //
+        // Здесь мы ожидаем вложенные данные:
+        // - details.title
+        // - details.description
+        // - price.value
+        // - geo.city
+        // - status
+        //
+
         $validated = $request->validate([
             'details.title'       => 'required|string|max:255',
             'details.description' => 'nullable|string',
             'price.value'         => 'nullable|numeric|min:0',
             'geo.city'            => 'nullable|string|max:255',
-            'status'              => 'required|string|in:draft,pending,published',
+            'status'              => 'nullable|string|in:draft,pending,published',
         ]);
 
-        // Сохраняем аниматора, вытаскивая данные из вложенных массивов:
+        // Если статус не передали — по умолчанию 'draft'
+        $status = $validated['status'] ?? 'draft';
+
+        // Создаём новую запись, "распаковывая" вложенные значения
         $animator = Animator::create([
             'user_id'     => Auth::id(),
             'title'       => $validated['details']['title'],
             'description' => $validated['details']['description'] ?? '',
             'price'       => $validated['price']['value'] ?? null,
             'city'        => $validated['geo']['city'] ?? '',
-            'status'      => $validated['status'],
+            'status'      => $status,
         ]);
 
-        /*
-         * 2) После того, как удалось сохранить или опубликовать, 
-         *    мы делаем redirect на ту вкладку, что соответствует status:
-         *    - draft   → /profile/items/draft/all
-         *    - pending → /profile/items/pending/all
-         *    - published → /profile/items/published/all
-         *
-         *  Пример маршрута (в web.php) мы уже сделали с параметром {tab}/{filter?}.
-         */
+        // После сохранения делаем редирект на вкладку с соответствующим статусом
         return redirect()->route('profile.items', [
-            'tab'    => $validated['status'],
-            'filter' => 'all',
+            'tab'    => $status === 'draft' ? 'draft' :
+                        ($status === 'pending' ? 'published' : 'published'),
+            'filter' => 'all'
         ])->with('success', 'Анкета сохранена');
     }
 }

@@ -30,16 +30,11 @@ import Step10Review     from './Create/Step10Review.vue'
 /* ───────────────────────────────────────────────────────────── */
 const step1DetailsRef = ref<HTMLDivElement | null>(null)
 
-/* Получаем props от Inertia */
+/* Получаем props от Inertia: flash-сообщение хранится в page.props.success */
 const page = usePage()
-
-/*
- * В контроллере мы делаем `->with('success', 'Анкета сохранена')`.
- * Поэтому здесь читаем именно page.props.success.
- */
 const successMessage = computed(() => page.props.success || '')
 
-/* Модель всей формы (вложенные объекты) */
+/* Модель всей формы (вложенные поля) */
 const form = reactive({
   details:  { title: '', description: '' },
   workFormat: {
@@ -60,7 +55,7 @@ const form = reactive({
   status:    'draft'
 })
 
-/* Правила валидации для вложенных полей через dot-notation */
+/* Правила валидации для вложенных ключей через “dot-notation” */
 const { errors, validate } = useValidator(form, {
   'details.title':               v => v ? '' : 'Укажите название объявления',
   'workFormat.specialization':   v => v ? '' : 'Укажите специальность',
@@ -76,7 +71,7 @@ const { errors, validate } = useValidator(form, {
   'contacts.phone':              v => v ? '' : 'Введите телефон'
 })
 
-/* ─────────── «Разместить» (pending) ─────────── */
+/* ─────────── Функция “Разместить” (pending) ─────────── */
 function onPlace () {
   form.status = 'pending'
   const { ok } = validate()
@@ -84,7 +79,7 @@ function onPlace () {
     submitForm()
     return
   }
-  /* прокрутка к первому полю с ошибкой */
+  /* Прокрутка к первому полю с ошибкой */
   nextTick(() => {
     if (errors['details.title'] && step1DetailsRef.value?.titleInput) {
       step1DetailsRef.value.titleInput.focus()
@@ -108,22 +103,22 @@ function onPlace () {
   })
 }
 
-/* ─────────── «Сохранить и выйти» (draft) ─────────── */
+/* ─────────── Функция “Сохранить и выйти” (draft) ─────────── */
 function saveAndExit () {
   form.status = 'draft'
   Inertia.post(route('animators.store'), form, {
-    preserveScroll: true,        // Страница не перезагружается полностью, flash придёт в новый props
+    preserveScroll: true,        // не перезагружает компонент, flash останется в props
     onError: (err) => {
-      alert('Ошибка: ' + JSON.stringify(err))
+      alert('Ошибка при сохранении: ' + JSON.stringify(err))
     }
   })
 }
 
-/* ─────────── Обычная отправка (например, «Разместить») ─────────── */
+/* ─────────── Простая отправка (например, после клика “Разместить”) ─────────── */
 function submitForm () {
   Inertia.post(route('animators.store'), form, {
     onError: (err) => {
-      // Здесь можно обработать ошибки, если нужно
+      // Здесь можно обработать ошибки, если требуется
     },
   })
 }
@@ -132,7 +127,7 @@ function submitForm () {
 <template>
   <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow">
     <form @submit.prevent="submitForm">
-      <!-- 1) Показ flash-сообщения, если оно задано контроллером -->
+      <!-- 1) Flash-сообщение об удачном сохранении -->
       <div
         v-if="successMessage"
         class="mb-4 p-3 rounded bg-green-100 text-green-800 text-center shadow"
@@ -152,7 +147,7 @@ function submitForm () {
       <Step9Contacts                         v-model:form="form.contacts"    :errors="errors" />
       <Step10Review                          v-model:form="form.review"      :errors="errors" />
 
-      <!-- 3) Кнопки «Разместить» и «Сохранить и выйти» -->
+      <!-- 3) Кнопки “Разместить” и “Сохранить и выйти” -->
       <div class="flex gap-4 mt-10 justify-center">
         <button
           type="button"
@@ -172,18 +167,18 @@ function submitForm () {
 
       <!-- 4) Текст про правила Авито -->
       <p class="mt-4 text-center text-gray-500 text-base leading-tight max-w-xl">
-        Вы публикуете объявление и данные в&nbsp;нём, чтобы их мог посмотреть кто&nbsp;угодно в&nbsp;интернете.<br>
+        Вы публикуете объявление и данные в нём, чтобы их мог посмотреть кто угодно в интернете.<br>
         Вы также соглашаетесь
         <a
           href="https://www.avito.ru/legal/rules"
           target="_blank"
           class="underline"
-        >с&nbsp;правилами Авито</a>.
+        >с правилами Авито</a>.
       </p>
     </form>
   </div>
 </template>
 
 <style scoped>
-/* Ваши стили оставлены без изменений */
+/* Ваши стили без изменений */
 </style>
