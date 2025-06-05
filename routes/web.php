@@ -33,14 +33,10 @@ Route::middleware('auth')->group(function () {
     Route::patch ('/profile',  [ProfileController::class, 'update' ])->name('profile.update');
     Route::delete('/profile',  [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    /* список объявлений */
-    Route::get('/profile/items/{status?}', [ItemsController::class, 'index'])
-        ->where('status', 'draft|pending|published')
+    /* Новый маршрут вкладок объявлений (Avito-style) */
+    Route::get('/profile/items/{tab}/{filter?}', [ItemsController::class, 'index'])
+        ->where('tab', 'draft|published|inactive|old')
         ->name('profile.items');
-
-    /* создание и публикация объявления */
-    Route::get ('/animators/create', [AnimatorController::class, 'create'])->name('animators.create');
-    Route::post('/animators',        [AnimatorController::class, 'store' ])->name('animators.store');
 });
 
 /* ─────────── Auth (Breeze / Fortify) ─────────── */

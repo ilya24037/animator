@@ -1,35 +1,45 @@
 <script setup>
-import { router } from '@inertiajs/vue3';
-const props = defineProps({ item: Object });
-
-function toEdit() {
-  router.visit(`/items/${props.item.id}/edit`);
-}
-function publish() {
-  router.patch(`/profile/items/${props.item.id}/status`, { status: 'waiting' });
-}
-function remove() {
-  router.patch(`/profile/items/${props.item.id}/status`, { status: 'archived' });
-}
+defineProps(['item'])
 </script>
 
 <template>
-  <div class="flex gap-4 p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-    <img :src="item.preview_url" alt="" class="w-24 h-24 object-cover rounded-md" />
-    <div class="flex-1">
-      <div class="flex justify-between items-start">
-        <h3 class="text-lg font-semibold">{{ item.title }}</h3>
-        <span class="text-gray-400 text-sm">{{ item.price }} ₽</span>
+  <div class="border rounded-lg p-4 mb-4 flex justify-between items-center bg-white shadow-sm hover:shadow-md transition">
+    <div class="flex items-center gap-4">
+      <!-- Превью (если появится картинка) -->
+      <div class="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-2xl shrink-0">
+        <span v-if="item.preview_url">
+          <img :src="item.preview_url" alt="Превью" class="w-full h-full object-cover rounded-lg" />
+        </span>
+        <span v-else>?</span>
       </div>
-      <p class="text-gray-500 text-sm">{{ item.city }}</p>
-      <div v-if="item.reason" class="mt-2 text-xs text-red-500">
-        {{ item.reason }}
+      <div>
+        <div class="font-semibold text-lg mb-1">{{ item.title }}</div>
+        <div v-if="item.price" class="font-medium text-blue-700 mb-1">Цена: {{ item.price }} ₽</div>
+        <div class="text-gray-500 text-xs mb-1">
+          Статус: 
+          <span v-if="item.status === 'draft'">Черновик</span>
+          <span v-else-if="item.status === 'published'">Активно</span>
+          <span v-else-if="item.status === 'inactive'">Отклонено</span>
+          <span v-else-if="item.status === 'archive'">В архиве</span>
+          <span v-else>{{ item.status }}</span>
+        </div>
+        <div v-if="item.created_at" class="text-gray-400 text-xs">
+          Добавлено: {{ item.created_at.substring(0, 10) }}
+        </div>
       </div>
-      <div class="mt-3 flex gap-3 text-sm">
-        <button @click="toEdit" class="text-blue-600 hover:underline">Изменить</button>
-        <button v-if="item.status === 'draft'" @click="publish" class="text-green-600 hover:underline">Опубликовать</button>
-        <button @click="remove" class="text-gray-400 hover:underline">Удалить</button>
-      </div>
+    </div>
+    <div class="flex flex-col gap-2 items-end">
+      <button class="btn btn-sm">Редактировать</button>
+      <button class="btn btn-sm bg-red-600 hover:bg-red-700">Удалить</button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.btn {
+  @apply px-4 py-2 rounded-xl font-semibold text-white bg-black transition;
+}
+.btn-sm {
+  @apply px-3 py-1 text-sm;
+}
+</style>

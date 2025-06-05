@@ -9,29 +9,37 @@ use Inertia\Inertia;
 
 class ItemsController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, $tab = 'draft', $filter = 'all')
     {
         $userId = $request->user()->id;
 
-        $pending = Item::where('user_id', $userId)
-            ->where('status', 'pending')
+        // Карта вкладок <-> статусов
+        $statusMap = [
+            'draft'     => 'draft',
+            'published' => 'published',
+            'inactive'  => 'inactive',
+            'old'       => 'archive',
+        ];
+        $status = $statusMap[$tab] ?? 'draft';
+
+        $items = Item::where('user_id', $userId)
+            ->where('status', $status)
             ->orderByDesc('created_at')
             ->get();
 
-        $drafts = Item::where('user_id', $userId)
-            ->where('status', 'draft')
-            ->orderByDesc('created_at')
-            ->get();
-
-        $archive = Item::where('user_id', $userId)
-            ->where('status', 'archive')
-            ->orderByDesc('created_at')
-            ->get();
+        $counts = [
+            'draft'     => Item::where('user_id', $userId)->where('status', 'draft')->count(),
+            'published' => Item::where('user_id', $userId)->where('status', 'published')->count(),
+            'inactive'  => Item::where('user_id', $userId)->where('status', 'inactive')->count(),
+            'old'       => Item::where('user_id', $userId)->where('status', 'archive')->count(),
+        ];
 
         return Inertia::render('Profile/Items', [
-            'pending' => $pending,
-            'drafts' => $drafts,
-            'archive' => $archive,
+            'items'   => $items,
+            'tab'     => $tab,
+            'filter'  => $filter,
+            'counts'  => $counts,
+            'query'   => $request->query(),
         ]);
     }
 }
