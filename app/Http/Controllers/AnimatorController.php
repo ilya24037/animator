@@ -88,13 +88,17 @@ class AnimatorController extends Controller
      */
     public function store(Request $request)
     {
+        // Статус теперь nullable, дефолт draft, строгая проверка только если пришёл
         $validated = $request->validate([
             'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
             'price'       => 'nullable|numeric|min:0',
             'city'        => 'nullable|string|max:255',
-            'status'      => 'required|string|in:draft,pending,published',
+            'status'      => 'nullable|string|in:draft,pending,published',
         ]);
+
+        // Если статус не передали — по умолчанию черновик
+        $status = $validated['status'] ?? 'draft';
 
         $animator = Animator::create([
             'user_id'     => Auth::id(),
@@ -102,9 +106,13 @@ class AnimatorController extends Controller
             'description' => $validated['description'] ?? '',
             'price'       => $validated['price'] ?? null,
             'city'        => $validated['city'] ?? '',
-            'status'      => $validated['status'],
+            'status'      => $status,
         ]);
 
-        return redirect()->route('profile.items')->with('success', 'Анкета сохранена');
+        // После сохранения — редирект в соответствующую вкладку
+        return redirect()->route('profile.items', [
+            'tab' => $status === 'draft' ? 'draft' : ($status === 'pending' ? 'pending' : 'published'),
+            'filter' => 'all'
+        ])->with('success', 'Анкета сохранена');
     }
 }
