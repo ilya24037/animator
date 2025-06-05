@@ -10,18 +10,17 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Создаём администратора, только если email ещё не существует
+        // ► Дев-учётка c предсказуемым паролем
         User::firstOrCreate(
-            ['email' => 'admin@example.com'],
+            ['email' => 'sveta@mail.ru'],
             [
-                'name' => 'admin',
-                'password' => Hash::make('password'),
-                'role' => 'admin',
-                'is_verified' => true,
+                'name'              => 'Sveta Dev',
+                'password'          => Hash::make('password'),
+                'email_verified_at' => now(),
             ]
         );
 
-        // Фейковые пользователи
-        User::factory()->count(10)->create();
+        // ► Остальные случайные пользователи (как раньше)
+        User::factory()->count(9)->create();
     }
 }

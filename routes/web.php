@@ -6,6 +6,7 @@ use Inertia\Inertia;
 /* ─────────── Контроллеры ─────────── */
 use App\Http\Controllers\AnimatorController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Personal\ItemController;                  // ← добавили
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
@@ -15,26 +16,31 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\PasswordController;
-use App\Http\Controllers\Api\CategoryApiController;
-
-Route::get('/api/categories', [CategoryApiController::class, 'index'])->name('api.categories.index');
 
 /* ─────────── Главная ─────────── */
 Route::get('/', [AnimatorController::class, 'home'])->name('home');
 
-/* ─────────── Dashboard (НУЖЕН для redirect’ов Breeze) ─────────── */
+/* ─────────── Dashboard ─────────── */
 Route::get('/dashboard', fn () => Inertia::render('Dashboard'))
       ->middleware(['auth', 'verified'])
       ->name('dashboard');
 
-/* ─────────── Профиль ─────────── */
+/* ─────────── Профиль + личные объявления ─────────── */
 Route::middleware('auth')->group(function () {
+
+    /* профиль */
     Route::get   ('/profile',  [ProfileController::class, 'edit'   ])->name('profile.edit');
     Route::patch ('/profile',  [ProfileController::class, 'update' ])->name('profile.update');
     Route::delete('/profile',  [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    /* список объявлений ⇢ route('profile.items', {status?})   */
+    Route::get('/profile/items/{status?}', [ItemController::class, 'index'])
+        ->where('status', 'draft|pending|published')
+        ->name('profile.items');                                    // ← добавили
 });
 
 /* ─────────── Auth (Breeze / Fortify) ─────────── */
+
 /* регистрация */
 Route::get('/register', [RegisteredUserController::class, 'create'])->middleware('guest')->name('register');
 Route::post('/register', [RegisteredUserController::class, 'store'])->middleware('guest');
@@ -51,15 +57,16 @@ Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])-
 Route::post('/reset-password',       [NewPasswordController::class, 'store' ])->middleware('guest')->name('password.store');
 
 /* подтверждение e-mail */
-Route::get('/verify-email',               EmailVerificationPromptController::class)->middleware('auth')->name('verification.notice');
-Route::get('/verify-email/{id}/{hash}',   VerifyEmailController::class)->middleware(['auth','signed','throttle:6,1'])->name('verification.verify');
+Route::get('/verify-email',             EmailVerificationPromptController::class)->middleware('auth')->name('verification.notice');
+Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)->middleware(['auth','signed','throttle:6,1'])->name('verification.verify');
 Route::post('/email/verification-notification', [EmailVerificationNotificationController::class, 'store'])->middleware(['auth','throttle:6,1'])->name('verification.send');
 
-/* подтверждение пароля + обновление пароля у залогиненого */
-Route::get ('/confirm-password',  [ConfirmablePasswordController::class, 'show'  ])->middleware('auth')->name('password.confirm');
-Route::post('/confirm-password',  [ConfirmablePasswordController::class, 'store' ])->middleware('auth');
-Route::put ('/password',          [PasswordController::class,          'update'])->middleware('auth')->name('password.update');
+/* подтверждение пароля + изменение пароля */
+Route::get ('/confirm-password', [ConfirmablePasswordController::class, 'show' ])->middleware('auth')->name('password.confirm');
+Route::post('/confirm-password', [ConfirmablePasswordController::class, 'store'])->middleware('auth');
+Route::put ('/password',         [PasswordController::class,          'update'])->middleware('auth')->name('password.update');
 
-/* оставшиеся публичные / аниматор-роуты — без изменений … */
+/* ─────────── Прочие маршруты (аниматоры, публичные) — оставлены без изменений ─────────── */
 
-require __DIR__.'/auth.php';  // строка должна быть в конце
+require __DIR__.'/auth.php';
+
