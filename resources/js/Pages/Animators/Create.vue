@@ -94,8 +94,10 @@ function onPlace () {
 function saveAndExit () {
   form.status = 'draft'
   Inertia.post(route('animators.store'), form, {
+    preserveState: true,
     onSuccess: () => {
       alert('Черновик сохранён!')
+      // Если нужно — можешь сделать router.visit('/profile/items/draft/all')
     },
     onError: (err) => {
       alert('Ошибка: ' + JSON.stringify(err))
@@ -154,13 +156,3 @@ function submitForm () {
 <style scoped>
 /* Ваши стили без изменений */
 </style>
----
-
-**Пояснение:**  
-- Теперь alert появится только после успешного сохранения и не будет "смываться" перерисовкой.
-- Если нужна ваша собственная навигация (например, остаться на странице после черновика) — используйте дополнительные опции Inertia.
-
----
-
-**Если не сработает — пришлите логи консоли браузера после клика на кнопку.**
-
