@@ -31,14 +31,14 @@ const defaultAvatar = 'https://www.avito.st/stub_avatars/%D0%98/12_256x256.png'
     </div>
 
     <nav class="space-y-6 text-sm w-full">
-      <!-- “Мои объявления” теперь ведёт на маршрут profile.items -->
+      <!-- “Мои объявления” теперь всегда с tab и filter -->
       <SidebarLink
-        :href="route('profile.items')"
+        :href="route('profile.items', { tab: 'draft', filter: 'all' })"
         :active="route().current('profile.items')"
         text="Мои объявления"
       />
 
-      <!-- Остальные пункты меню -->
+      <!-- Остальные пункты меню без изменений -->
       <SidebarLink href="/profile/contacts" text="Мои отзывы" />
       <SidebarLink href="/favorites" text="Избранное" />
       <SidebarLink href="/profile/messenger" text="Сообщения" />
