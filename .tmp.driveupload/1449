@@ -37,6 +37,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile/items/{tab}/{filter?}', [ItemsController::class, 'index'])
         ->where('tab', 'draft|published|inactive|old')
         ->name('profile.items');
+
+    /* --- ДОБАВЛЕНО: создание и публикация объявления (нужно для Ziggy и фронта) --- */
+    Route::get('/animators/create', [AnimatorController::class, 'create'])->name('animators.create');
+    Route::post('/animators', [AnimatorController::class, 'store'])->name('animators.store');
 });
 
 /* ─────────── Auth (Breeze / Fortify) ─────────── */
@@ -69,3 +73,4 @@ Route::put ('/password',         [PasswordController::class,          'update'])
 /* ─────────── Прочие маршруты (аниматоры, публичные) — оставлены без изменений ─────────── */
 
 require __DIR__.'/auth.php';
+
