@@ -6,7 +6,7 @@ use Inertia\Inertia;
 /* ─────────── Контроллеры ─────────── */
 use App\Http\Controllers\AnimatorController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Personal\ItemController;                  // ← добавили
+use App\Http\Controllers\Profile\ItemsController; // ← исправлено
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
@@ -34,9 +34,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile',  [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     /* список объявлений ⇢ route('profile.items', {status?})   */
-    Route::get('/profile/items/{status?}', [ItemController::class, 'index'])
+    Route::get('/profile/items/{status?}', [ItemsController::class, 'index'])
         ->where('status', 'draft|pending|published')
-        ->name('profile.items');                                    // ← добавили
+        ->name('profile.items'); // ← исправлено
 });
 
 /* ─────────── Auth (Breeze / Fortify) ─────────── */
@@ -69,4 +69,3 @@ Route::put ('/password',         [PasswordController::class,          'update'])
 /* ─────────── Прочие маршруты (аниматоры, публичные) — оставлены без изменений ─────────── */
 
 require __DIR__.'/auth.php';
-
