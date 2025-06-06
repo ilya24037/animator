@@ -11,18 +11,48 @@ class Animator extends Model
 
     protected $table = 'animators';
 
-    // Разрешённые к массовому заполнению поля
+    // ✅ ИСПРАВЛЕНО: Добавили все недостающие поля
     protected $fillable = [
+        'user_id',
         'name',
+        'title',           // Новое поле - название объявления
+        'description',     // Новое поле - описание
         'age',
         'height',
+        'weight',
         'price',
         'rating',
         'reviews_count',
+        'reviews',
         'slug',
         'photo_folder',
+        'city',
+        'address',         // Новое поле - адрес
+        'phone',           // Новое поле - телефон
+        'email',           // Новое поле - email
+        'specialization',  // Новое поле - специализация
+        'work_format',     // JSON поле - формат работы
+        'price_list',      // JSON поле - прайс-лист
+        'actions_data',    // JSON поле - акции
+        'geo_data',        // JSON поле - география
+        'contacts_data',   // JSON поле - контакты
+        'type',
+        'is_online',
+        'is_verified',
+        'image',
         'status',
-        'user_id',
+    ];
+
+    // ✅ ДОБАВЛЕНО: Указываем Laravel как работать с JSON полями
+    protected $casts = [
+        'work_format' => 'array',
+        'price_list' => 'array',
+        'actions_data' => 'array',
+        'geo_data' => 'array',
+        'contacts_data' => 'array',
+        'is_online' => 'boolean',
+        'is_verified' => 'boolean',
+        'rating' => 'float',
     ];
 
     /**

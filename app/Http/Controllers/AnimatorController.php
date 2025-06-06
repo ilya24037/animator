@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Animator;
+use App\Http\Requests\StoreAnimatorRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Log;
 
 class AnimatorController extends Controller
 {
@@ -76,7 +78,7 @@ class AnimatorController extends Controller
     }
 
     /**
-     * Показать форму создания объявления (шаги Create.vue)
+     * Показать форму создания объявления
      */
     public function create()
     {
@@ -84,42 +86,116 @@ class AnimatorController extends Controller
     }
 
     /**
-     * Сохранить новое объявление (черновик или опубликовать)
-     *
-     * Теперь мы валидируем вложенные поля:
-     *  - details.title
-     *  - details.description
-     *  - price.value
-     *  - geo.city
-     *  - status
+     * ✅ ИСПРАВЛЕНО: Сохранить новое объявление (черновик или опубликовать)
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'details.title'       => 'required|string|max:255',
-            'details.description' => 'nullable|string',
-            'price.value'         => 'nullable|numeric|min:0',
-            'geo.city'            => 'nullable|string|max:255',
-            'status'              => 'nullable|string|in:draft,pending,published',
-        ]);
+        // 📝 Логируем входящие данные для отладки
+        Log::info('📥 Данные из формы создания объявления:', $request->all());
 
-        // Если статус не передали — считаем это "draft"
-        $status = $validated['status'] ?? 'draft';
+        try {
+            // 🔍 Валидируем входящие данные с учетом вложенной структуры
+            $validated = $request->validate([
+                // Основные детали
+                'details.title'       => 'required|string|max:255',
+                'details.description' => 'nullable|string',
+                
+                // Формат работы
+                'workFormat.specialization'   => 'nullable|string|max:255',
+                'workFormat.type'             => 'nullable|string|max:100',
+                'workFormat.clients'          => 'nullable|array',
+                'workFormat.workFormats'      => 'nullable|array', 
+                'workFormat.serviceProviders' => 'nullable|array',
+                'workFormat.experience'       => 'nullable|string|max:100',
+                
+                // Прайс-лист
+                'priceList.priceItems' => 'nullable|array',
+                'priceList.priceItems.*.name' => 'string|max:255',
+                'priceList.priceItems.*.price' => 'nullable|numeric|min:0',
+                'priceList.priceItems.*.unit' => 'nullable|string|max:50',
+                'priceList.priceItems.*.duration' => 'nullable|string|max:50',
+                
+                // Основная цена
+                'price.value' => 'nullable|numeric|min:0',
+                'price.unit'  => 'nullable|string|max:50',
+                'price.isBasePrice' => 'nullable|boolean',
+                
+                // Акции
+                'actions.discount' => 'nullable|numeric|min:0|max:100',
+                'actions.gift'     => 'nullable|string|max:500',
+                
+                // География
+                'geo.city'       => 'nullable|string|max:255',
+                'geo.address'    => 'nullable|string|max:500',
+                'geo.visitType'  => 'nullable|string|in:no_visit,all_city,zones',
+                
+                // Контакты
+                'contacts.phone'       => 'nullable|string|max:20',
+                'contacts.email'       => 'nullable|email|max:255',
+                'contacts.contactWays' => 'nullable|array',
+                
+                // Обзор
+                'review.text' => 'nullable|string',
+                
+                // Статус
+                'status' => 'nullable|string|in:draft,pending,published',
+            ]);
 
-        // Создаём запись, "распаковывая" вложенные данные
-        $animator = Animator::create([
-            'user_id'     => Auth::id(),
-            'title'       => $validated['details']['title'],
-            'description' => $validated['details']['description'] ?? '',
-            'price'       => $validated['price']['value'] ?? null,
-            'city'        => $validated['geo']['city'] ?? '',
-            'status'      => $status,
-        ]);
+            Log::info('✅ Валидация прошла успешно:', $validated);
 
-        // После сохранения перенаправляем пользователя на вкладку с подходящим статусом
-        return redirect()->route('profile.items', [
-            'tab'    => $status === 'draft' ? 'draft' : 'published',
-            'filter' => 'all'
-        ])->with('success', 'Анкета сохранена');
+            // 📋 Если статус не передали — считаем это "draft"
+            $status = $validated['status'] ?? 'draft';
+
+            // 🔄 Преобразуем данные из формы в формат для базы данных
+            $animatorData = [
+                'user_id'     => Auth::id(),
+                'title'       => $validated['details']['title'],
+                'description' => $validated['details']['description'] ?? '',
+                'price'       => $validated['price']['value'] ?? null,
+                'city'        => $validated['geo']['city'] ?? '',
+                'address'     => $validated['geo']['address'] ?? '',
+                'phone'       => $validated['contacts']['phone'] ?? '',
+                'email'       => $validated['contacts']['email'] ?? '',
+                'specialization' => $validated['workFormat']['specialization'] ?? '',
+                'status'      => $status,
+                
+                // 📦 Сохраняем сложные данные в JSON полях
+                'work_format'  => $validated['workFormat'] ?? [],
+                'price_list'   => $validated['priceList'] ?? [],
+                'actions_data' => $validated['actions'] ?? [],
+                'geo_data'     => $validated['geo'] ?? [],
+                'contacts_data'=> $validated['contacts'] ?? [],
+            ];
+
+            Log::info('📤 Подготовленные данные для сохранения:', $animatorData);
+
+            // 💾 Создаём запись в базе данных
+            $animator = Animator::create($animatorData);
+
+            Log::info('🎉 Аниматор успешно создан с ID: ' . $animator->id);
+
+            // 📧 Сообщение об успешном сохранении
+            $message = $status === 'draft' 
+                ? 'Черновик успешно сохранен' 
+                : 'Объявление успешно размещено';
+
+            // 🔄 После сохранения перенаправляем пользователя на соответствующую вкладку
+            return redirect()->route('profile.items', [
+                'tab'    => $status === 'draft' ? 'draft' : 'published',
+                'filter' => 'all'
+            ])->with('success', $message);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('❌ Ошибки валидации:', $e->errors());
+            
+            // Возвращаем ошибки валидации обратно в форму
+            return back()->withErrors($e->errors())->withInput();
+            
+        } catch (\Exception $e) {
+            Log::error('💥 Ошибка при сохранении аниматора: ' . $e->getMessage());
+            Log::error('🔍 Stack trace: ' . $e->getTraceAsString());
+            
+            return back()->with('error', 'Произошла ошибка при сохранении. Попробуйте еще раз.');
+        }
     }
 }
