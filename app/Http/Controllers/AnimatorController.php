@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Animator;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,7 +24,7 @@ class AnimatorController extends Controller
     {
         $query = Animator::query();
 
-        // Применяем фильтры из запроса
+        // Применяем фильтры по параметрам запроса
         if (request()->filled('city')) {
             $query->where('city', request('city'));
         }
@@ -45,18 +44,18 @@ class AnimatorController extends Controller
             $query->where('type', request('type'));
         }
 
-        // Подготавливаем каждую карточку (коллекцию изображений)
+        // Получаем все карточки и подготавливаем массив изображений для каждой
         $cards = $query->get()->map(function ($card) {
             $imageDir = public_path("images/cards/{$card->id}");
             $images = [];
 
-            if (File::exists($imageDir)) {
+            if (is_dir($imageDir)) {
                 $main = "main.jpg";
-                if (File::exists($imageDir . DIRECTORY_SEPARATOR . $main)) {
+                if (file_exists($imageDir . DIRECTORY_SEPARATOR . $main)) {
                     $images[] = asset("images/cards/{$card->id}/{$main}");
                 }
 
-                $files = collect(File::files($imageDir))
+                $files = collect(\Illuminate\Support\Facades\File::files($imageDir))
                     ->filter(fn($f) => preg_match('/\.(jpg|jpeg|png)$/i', $f->getFilename()) && $f->getFilename() !== 'main.jpg')
                     ->sortBy(fn($f) => $f->getFilename());
 
@@ -85,19 +84,17 @@ class AnimatorController extends Controller
     }
 
     /**
-     * Сохранить новое объявление (либо черновик, либо опубликовать)
+     * Сохранить новое объявление (черновик или опубликовать)
+     *
+     * Теперь мы валидируем вложенные поля:
+     *  - details.title
+     *  - details.description
+     *  - price.value
+     *  - geo.city
+     *  - status
      */
     public function store(Request $request)
     {
-        //
-        // Здесь мы ожидаем вложенные данные:
-        // - details.title
-        // - details.description
-        // - price.value
-        // - geo.city
-        // - status
-        //
-
         $validated = $request->validate([
             'details.title'       => 'required|string|max:255',
             'details.description' => 'nullable|string',
@@ -106,10 +103,10 @@ class AnimatorController extends Controller
             'status'              => 'nullable|string|in:draft,pending,published',
         ]);
 
-        // Если статус не передали — по умолчанию 'draft'
+        // Если статус не передали — считаем это "draft"
         $status = $validated['status'] ?? 'draft';
 
-        // Создаём новую запись, "распаковывая" вложенные значения
+        // Создаём запись, "распаковывая" вложенные данные
         $animator = Animator::create([
             'user_id'     => Auth::id(),
             'title'       => $validated['details']['title'],
@@ -119,10 +116,9 @@ class AnimatorController extends Controller
             'status'      => $status,
         ]);
 
-        // После сохранения делаем редирект на вкладку с соответствующим статусом
+        // После сохранения перенаправляем пользователя на вкладку с подходящим статусом
         return redirect()->route('profile.items', [
-            'tab'    => $status === 'draft' ? 'draft' :
-                        ($status === 'pending' ? 'published' : 'published'),
+            'tab'    => $status === 'draft' ? 'draft' : 'published',
             'filter' => 'all'
         ])->with('success', 'Анкета сохранена');
     }
