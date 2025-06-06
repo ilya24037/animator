@@ -9,14 +9,13 @@ class Animator extends Model
 {
     use HasFactory;
 
-    protected $table = 'animators';
-
-    // ✅ ИСПРАВЛЕНО: Добавили все недостающие поля
     protected $fillable = [
         'user_id',
+        'city_id',
         'name',
-        'title',           // Новое поле - название объявления
-        'description',     // Новое поле - описание
+        'title',
+        'description',
+        'about',
         'age',
         'height',
         'weight',
@@ -27,59 +26,87 @@ class Animator extends Model
         'slug',
         'photo_folder',
         'city',
-        'address',         // Новое поле - адрес
-        'phone',           // Новое поле - телефон
-        'email',           // Новое поле - email
-        'specialization',  // Новое поле - специализация
-        'work_format',     // JSON поле - формат работы
-        'price_list',      // JSON поле - прайс-лист
-        'actions_data',    // JSON поле - акции
-        'geo_data',        // JSON поле - география
-        'contacts_data',   // JSON поле - контакты
+        'address',
+        'phone',
+        'email',
+        'specialization',
+        'work_format',
+        'price_list',
+        'actions_data',
+        'geo_data',
+        'contacts_data',
         'type',
         'is_online',
         'is_verified',
         'image',
         'status',
+        'zones',
+        'services',
+        'heroes',
+        'quick_booking',
+        'terms_accepted'
     ];
 
-    // ✅ ДОБАВЛЕНО: Указываем Laravel как работать с JSON полями
     protected $casts = [
         'work_format' => 'array',
         'price_list' => 'array',
         'actions_data' => 'array',
         'geo_data' => 'array',
         'contacts_data' => 'array',
+        'services' => 'array',
         'is_online' => 'boolean',
         'is_verified' => 'boolean',
+        'quick_booking' => 'boolean',
+        'terms_accepted' => 'boolean',
         'rating' => 'float',
+        'price' => 'decimal:2'
     ];
 
     /**
-     * Отношение к пользователю (владелец объявления)
+     * Отношение к пользователю
      */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // Остальной код модели без изменений
-    public function getAllImageUrlsAttribute()
+    /**
+     * Отношение к медиафайлам
+     */
+    public function media()
     {
-        $images = [];
-
-        for ($i = 1; $i <= 20; $i++) {
-            $path = public_path("images/cards/{$this->photo_folder}/{$i}.jpg");
-            if (file_exists($path)) {
-                $images[] = asset("images/cards/{$this->photo_folder}/{$i}.jpg");
-            }
-        }
-
-        return $images;
+        return $this->hasMany(Media::class);
     }
 
-    public function getMainImageUrlAttribute()
+    /**
+     * Получить фотографии
+     */
+    public function photos()
     {
-        return asset("images/cards/{$this->photo_folder}/main.jpg");
+        return $this->media()->where('type', 'photo');
+    }
+
+    /**
+     * Scope для черновиков
+     */
+    public function scopeDrafts($query)
+    {
+        return $query->where('status', 'draft');
+    }
+
+    /**
+     * Scope для опубликованных
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('status', 'published');
+    }
+
+    /**
+     * Scope для пользователя
+     */
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
     }
 }
