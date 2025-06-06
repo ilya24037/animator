@@ -1,3 +1,56 @@
+<template>
+  <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow">
+    <form @submit.prevent="submitForm">
+      <!-- ✅ ДОБАВЛЕНО: Сообщения об успехе/ошибке -->
+      <div v-if="successMessage" class="mb-4 p-3 rounded bg-green-100 text-green-800 text-center shadow">
+        ✅ {{ successMessage }}
+      </div>
+      
+      <div v-if="errorMessage" class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center shadow">
+        ❌ {{ errorMessage }}
+      </div>
+
+      <!-- Все 10 шагов формы -->
+      <Step1Details     ref="step1DetailsRef"     v-model:form="form.details"   :errors="errors" />
+      <Step2WorkFormat                       v-model:form="form.workFormat"  :errors="errors" />
+      <Step3PriceList                        v-model:form="form.priceList"   :errors="errors" />
+      <Step4Description                      v-model:form="form.details"     :errors="errors" />
+      <Step5Price                            v-model:form="form.price"       :errors="errors" />
+      <Step6Actions                          v-model:form="form.actions"     :errors="errors" />
+      <Step7Media                            v-model:form="form.media"       :errors="errors" />
+      <Step8Geo                              v-model:form="form.geo"         :errors="errors" />
+      <Step9Contacts                         v-model:form="form.contacts"    :errors="errors" />
+      <Step10Review                          v-model:form="form.review"      :errors="errors" />
+
+      <!-- ✅ ИСПРАВЛЕНО: Кнопки с блокировкой во время отправки -->
+      <div class="flex gap-4 mt-10 justify-center">
+        <button
+          type="button"
+          :disabled="isSubmitting"
+          class="px-14 py-5 rounded-2xl font-semibold text-white text-xl bg-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="onPlace"
+        >
+          {{ isSubmitting ? '⏳ Размещаем...' : '🚀 Разместить' }}
+        </button>
+        <button
+          type="button"
+          :disabled="isSubmitting"
+          class="px-10 py-5 rounded-2xl font-semibold text-black text-xl bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="saveAndExit"
+        >
+          {{ isSubmitting ? '⏳ Сохраняем...' : '💾 Сохранить и выйти' }}
+        </button>
+      </div>
+
+      <!-- Текст про правила -->
+      <p class="mt-4 text-center text-gray-500 text-base leading-tight max-w-xl">
+        Вы публикуете объявление и данные в нём, чтобы их мог посмотреть кто угодно в интернете.<br>
+        Вы также соглашаетесь с правилами сервиса.
+      </p>
+    </form>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, reactive, nextTick, getCurrentInstance, computed } from 'vue'
 import { useValidator } from '@/utils/useValidator.js'
@@ -156,29 +209,3 @@ function scrollToFirstError() {
   })
 }
 </script>
-
-<template>
-  <div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow">
-    <form @submit.prevent="submitForm">
-      <!-- ✅ ДОБАВЛЕНО: Сообщения об успехе/ошибке -->
-      <div v-if="successMessage" class="mb-4 p-3 rounded bg-green-100 text-green-800 text-center shadow">
-        ✅ {{ successMessage }}
-      </div>
-      
-      <div v-if="errorMessage" class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center shadow">
-        ❌ {{ errorMessage }}
-      </div>
-
-      <!-- Все 10 шагов формы -->
-      <Step1Details     ref="step1DetailsRef"     v-model:form="form.details"   :errors="errors" />
-      <Step2WorkFormat                       v-model:form="form.workFormat"  :errors="errors" />
-      <Step3PriceList                        v-model:form="form.priceList"   :errors="errors" />
-      <Step4Description                      v-model:form="form.details"     :errors="errors" />
-      <Step5Price                            v-model:form="form.price"       :errors="errors" />
-      <Step6Actions                          v-model:form="form.actions"     :errors="errors" />
-      <Step7Media                            v-model:form="form.media"       :errors="errors" />
-      <Step8Geo                              v-model:form="form.geo"         :errors="errors" />
-      <Step9Contacts                         v-model:form="form.contacts"    :errors="errors" />
-      <Step10Review                          v-model:form="form.review"      :errors="errors" />
-
-      <!-- ✅ ИСПРАВЛЕНО: Кнопки с блокировкой во время отправки -->
