@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 /* ─────────── Контроллеры ─────────── */
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AnimatorController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Profile\ItemsController;
@@ -18,7 +19,7 @@ use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 
 /* ─────────── Главная ─────────── */
-Route::get('/', [AnimatorController::class, 'home'])->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 /* ─────────── Dashboard ─────────── */
 Route::get('/dashboard', fn () => Inertia::render('Dashboard'))
@@ -37,6 +38,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile/items/{tab}/{filter?}', [ItemsController::class, 'index'])
         ->where('tab', 'draft|pending|published|inactive|old')
         ->name('profile.items');
+    
+    // Короткий редирект для удобства
+    Route::get('/profile/items', function() {
+        return redirect()->route('profile.items', ['tab' => 'draft', 'filter' => 'all']);
+    });
 
     /* ─────────── Создание и управление объявлениями ─────────── */
     Route::get ('/animators/create', [AnimatorController::class, 'create'])->name('animators.create');
@@ -82,4 +88,4 @@ Route::get ('/confirm-password', [ConfirmablePasswordController::class, 'show' ]
 Route::post('/confirm-password', [ConfirmablePasswordController::class, 'store'])->middleware('auth');
 Route::put ('/password',         [PasswordController::class,          'update'])->middleware('auth')->name('password.update');
 
-require __DIR__.'/auth.php';
+// require __DIR__.'/auth.php'; // Эта строка дублирует маршруты выше, можно убрать
