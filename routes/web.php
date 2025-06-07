@@ -18,8 +18,8 @@ use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 
 /* ─────────── Главная ─────────── */
-Route::get('/', [AnimatorController::class, 'home'])->name('home');
-
+use App\Http\Controllers\HomeController;
+Route::get('/', [HomeController::class, 'index'])->name('home');
 /* ─────────── Dashboard ─────────── */
 Route::get('/dashboard', fn () => Inertia::render('Dashboard'))
       ->middleware(['auth', 'verified'])
