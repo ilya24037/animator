@@ -118,12 +118,12 @@ onUnmounted(() => {
   formStore.autoSave()
 })
 
-// Отправка формы
+// ОТПРАВКА ПУБЛИКАЦИИ
 async function handleSubmit () {
   isSubmitting.value = true
   Object.keys(errors).forEach(k => delete errors[k])
 
-  const result = await formStore.publish()
+  const result = await formStore.publish('published') // <- статус "published"
 
   if (result.success) {
     router.visit('/profile/items/draft/all', { preserveState: false })
@@ -135,10 +135,22 @@ async function handleSubmit () {
   isSubmitting.value = false
 }
 
-// Сохранить и выйти
+// СОХРАНИТЬ КАК ЧЕРНОВИК и выйти
 async function saveAndExit () {
-  await formStore.autoSave()
-  router.visit('/profile/items/draft/all')
+  isSubmitting.value = true
+  Object.keys(errors).forEach(k => delete errors[k])
+
+  // Вызов публикации с параметром "draft"
+  const result = await formStore.publish('draft')
+
+  if (result.success) {
+    router.visit('/profile/items/draft/all', { preserveState: false })
+  } else {
+    Object.assign(errors, result.errors)
+    scrollToFirstError()
+  }
+
+  isSubmitting.value = false
 }
 
 // Форматирование времени
@@ -160,3 +172,4 @@ function scrollToFirstError () {
 <style scoped>
 /* дополнительные стили по необходимости */
 </style>
+

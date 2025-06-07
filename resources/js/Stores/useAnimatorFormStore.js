@@ -1,161 +1,82 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import { ref, reactive } from 'vue'
+import { router } from '@inertiajs/vue3'
 
-export const useAnimatorFormStore = defineStore('animatorForm', {
-  state: () => ({
-    // ID черновика
-    draftId: null,
-    
-    // Состояние формы
-    form: {
-      details: { 
-        title: '', 
-        description: '' 
-      },
-      workFormat: {
-        specialization: '',
-        type: 'private', // Значение по умолчанию!
-        clients: [],
-        workFormats: [],
-        serviceProviders: [],
-        experience: ''
-      },
-      priceList: { 
-        priceItems: [] 
-      },
-      price: { 
-        value: '', 
-        unit: 'за час', 
-        isBasePrice: false 
-      },
-      actions: { 
-        discount: null, 
-        gift: '' 
-      },
-      media: { 
-        files: [], 
-        videoUrl: '' 
-      },
-      geo: { 
-        city: 'Москва', // Значение по умолчанию
-        address: '', 
-        visitType: 'all_city' // Значение по умолчанию
-      },
-      contacts: { 
-        phone: '', 
-        email: '', 
-        contactWays: ['any'] 
+export const useAnimatorFormStore = defineStore('animatorForm', () => {
+  const form = reactive({
+    details: {},
+    workFormat: {},
+    // ... остальные поля ...
+    status: 'draft',
+  })
+
+  const isSaving = ref(false)
+  const lastSaved = ref(null)
+  const saveError = ref(null)
+
+  function initForm(draft) {
+    Object.assign(form, draft)
+    form.status = draft.status || 'draft'
+  }
+
+  // Метод автосохранения (PATCH или POST в зависимости от draft)
+  async function autoSave() {
+    isSaving.value = true
+    saveError.value = null
+
+    try {
+      // если есть id — обновить, иначе создать черновик
+      if (form.id) {
+        await router.patch(`/animators/${form.id}`, { ...form, status: 'draft' }, { preserveState: true })
+      } else {
+        const res = await router.post('/animators', { ...form, status: 'draft' }, { preserveState: true })
+        if (res?.props?.item?.id) {
+          form.id = res.props.item.id // сохраняем id черновика
+        }
       }
-    },
-    
-    // Статусы
-    isSaving: false,
-    lastSaved: null,
-    saveError: null
-  }),
-  
-  getters: {
-    // Проверка заполненности формы
-    isFormEmpty: (state) => {
-      return !state.form.details.title && 
-             !state.form.details.description &&
-             state.form.priceList.priceItems.length === 0
-    },
-    
-    // Статус сохранения для UI
-    saveStatus: (state) => {
-      if (state.isSaving) return 'saving'
-      if (state.saveError) return 'error'
-      if (state.lastSaved) return 'saved'
-      return 'idle'
+      lastSaved.value = new Date()
+      return { success: true }
+    } catch (e) {
+      saveError.value = 'Ошибка автосохранения'
+      return { success: false, errors: e?.response?.data?.errors || {} }
+    } finally {
+      isSaving.value = false
     }
-  },
-  
-  actions: {
-    // Инициализация формы
-    initForm(draftData = null) {
-      if (draftData) {
-        this.draftId = draftData.id
-        // Восстанавливаем данные с проверкой
-        this.form.details.title = draftData.title || ''
-        this.form.details.description = draftData.description || ''
-        
-        if (draftData.work_format) {
-          Object.assign(this.form.workFormat, draftData.work_format)
-        }
-        
-        if (draftData.price_list) {
-          this.form.priceList = draftData.price_list
-        }
-        
-        // ... остальные поля
-      }
-    },
-    
-    // Автосохранение черновика
-    async autoSave() {
-      // Не сохраняем пустую форму
-      if (this.isFormEmpty) return
-      
-      this.isSaving = true
-      this.saveError = null
-      
-      try {
-        const response = await axios.post('/api/animators/draft', {
-          draft_id: this.draftId,
-          ...this.form
-        })
-        
-        if (response.data.success) {
-          this.draftId = response.data.animator.id
-          this.lastSaved = new Date()
-        }
-      } catch (error) {
-        console.error('Ошибка автосохранения:', error)
-        this.saveError = 'Не удалось сохранить черновик'
-      } finally {
-        this.isSaving = false
-      }
-    },
-    
-    // Публикация объявления
-    async publish() {
-      // Валидация перед отправкой
-      const errors = this.validateForm()
-      if (Object.keys(errors).length > 0) {
-        return { success: false, errors }
-      }
-      
-      try {
-        const response = await axios.post('/api/animators/publish', {
-          draft_id: this.draftId,
-          ...this.form
-        })
-        
-        return { success: true, data: response.data }
-      } catch (error) {
-        return { 
-          success: false, 
-          errors: error.response?.data?.errors || {}
+  }
+
+  // Главный метод публикации (publish)
+  async function publish(status = 'published') {
+    isSaving.value = true
+    saveError.value = null
+
+    try {
+      let response
+      // Если уже есть id — обновить (PUT), иначе создать (POST)
+      if (form.id) {
+        response = await router.patch(`/animators/${form.id}`, { ...form, status }, { preserveState: true })
+      } else {
+        response = await router.post('/animators', { ...form, status }, { preserveState: true })
+        if (response?.props?.item?.id) {
+          form.id = response.props.item.id
         }
       }
-    },
-    
-    // Валидация формы
-    validateForm() {
-      const errors = {}
-      
-      if (!this.form.details.title) {
-        errors['details.title'] = 'Укажите название объявления'
-      }
-      
-      if (!this.form.workFormat.type) {
-        errors['workFormat.type'] = 'Выберите формат работы'
-      }
-      
-      // ... остальные проверки
-      
-      return errors
+      lastSaved.value = new Date()
+      return { success: true }
+    } catch (e) {
+      saveError.value = 'Ошибка публикации'
+      return { success: false, errors: e?.response?.data?.errors || {} }
+    } finally {
+      isSaving.value = false
     }
+  }
+
+  return {
+    form,
+    isSaving,
+    lastSaved,
+    saveError,
+    initForm,
+    autoSave,
+    publish,
   }
 })
