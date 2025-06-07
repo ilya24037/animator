@@ -50,6 +50,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/animators/draft', [AnimatorController::class, 'saveDraft'])->name('animators.saveDraft');
 });
 
+
+// API маршруты для работы с черновиками
+Route::middleware(['auth'])->prefix('api')->group(function () {
+    Route::post('/animators/draft', [AnimatorController::class, 'saveDraft']);
+    Route::post('/animators/publish', [AnimatorController::class, 'publish']);
+    Route::get('/animators/draft/{id}', [AnimatorController::class, 'getDraft']);
+});
+
 /* ─────────── Публичные маршруты для объявлений ─────────── */
 Route::get('/animators/{animator}', [AnimatorController::class, 'show'])->name('animators.show');
 
