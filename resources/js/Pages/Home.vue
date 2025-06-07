@@ -5,14 +5,22 @@ import Filters from '@/Components/Filters.vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import SidebarColumn from '@/Components/SidebarColumn.vue'
 
-defineProps({
-  cards: Array,
-  filters: Object,
+// Добавляем значения по умолчанию для props
+const props = defineProps({
+  cards: {
+    type: Array,
+    default: () => []
+  },
+  filters: {
+    type: Object,
+    default: () => ({})
+  },
   cities: {
     type: Array,
     default: () => []
   }
 })
+
 defineOptions({ layout: AppLayout })
 </script>
 

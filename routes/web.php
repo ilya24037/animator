@@ -38,14 +38,20 @@ Route::middleware('auth')->group(function () {
         ->where('tab', 'draft|pending|published|inactive|old')
         ->name('profile.items');
 
-    /* ─────────── Создание объявления ─────────── */
+    /* ─────────── Создание и управление объявлениями ─────────── */
     Route::get ('/animators/create', [AnimatorController::class, 'create'])->name('animators.create');
     Route::post('/animators',        [AnimatorController::class, 'store' ])->name('animators.store');
+    Route::get('/animators/{animator}/edit', [AnimatorController::class, 'edit'])->name('animators.edit');
+    Route::put('/animators/{animator}', [AnimatorController::class, 'update'])->name('animators.update');
+    Route::delete('/animators/{animator}', [AnimatorController::class, 'destroy'])->name('animators.destroy');
     
-    /* ─────────── ДОБАВЛЕНО: Маршрут для черновика ─────────── */
-    Route::post('/animators/draft',  [AnimatorController::class, 'saveDraft'])->name('animators.draft.save');
-    Route::get ('/animators/draft/{id}', [AnimatorController::class, 'getDraft'])->name('animators.draft.get');
+    /* ─────────── AJAX маршруты для черновиков ─────────── */
+    Route::get('/animators/draft/{id}', [AnimatorController::class, 'getDraft'])->name('animators.getDraft');
+    Route::post('/animators/draft', [AnimatorController::class, 'saveDraft'])->name('animators.saveDraft');
 });
+
+/* ─────────── Публичные маршруты для объявлений ─────────── */
+Route::get('/animators/{animator}', [AnimatorController::class, 'show'])->name('animators.show');
 
 /* ─────────── Auth (Laravel Breeze) ─────────── */
 Route::get('/register', [RegisteredUserController::class, 'create'])->middleware('guest')->name('register');

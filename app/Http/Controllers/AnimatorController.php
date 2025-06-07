@@ -3,25 +3,90 @@
 namespace App\Http\Controllers;
 
 use App\Models\Animator;
+use App\Http\Requests\StoreAnimatorRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class AnimatorController extends Controller
 {
-    public function home()
+    /**
+     * Показать главную страницу
+     */
+    public function home(Request $request)
     {
-        // Метод для главной страницы
-        $animators = Animator::where('status', 'published')
-            ->orWhere('status', 'active')
-            ->paginate(20);
+        // Получаем аниматоров с фильтрацией
+        $query = Animator::query();
+        
+        // Фильтруем по статусу (только опубликованные)
+        $query->whereIn('status', ['published', 'active']);
+        
+        // Фильтры
+        if ($request->city) {
+            $query->where('city', $request->city);
+        }
+        
+        if ($request->is_online) {
+            $query->where('is_online', true);
+        }
+        
+        if ($request->is_verified) {
+            $query->where('is_verified', true);
+        }
+        
+        if ($request->type && in_array($request->type, ['private', 'company'])) {
+            $query->where('type', $request->type);
+        }
+        
+        if ($request->min_price) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        
+        if ($request->max_price) {
+            $query->where('price', '<=', $request->max_price);
+        }
+        
+        try {
+            $animators = $query->paginate(20);
             
+            // Преобразуем в формат для карточек
+            $cards = $animators->map(function ($animator) {
+                return [
+                    'id' => $animator->id,
+                    'name' => $animator->name ?? $animator->title ?? 'Без названия',
+                    'price' => $animator->price ?? 0,
+                    'age' => $animator->age ?? null,
+                    'height' => $animator->height ?? null,
+                    'rating' => $animator->rating ?? 4.5,
+                    'reviews' => $animator->reviews ?? 0,
+                    'city' => $animator->city ?? 'Не указан',
+                    'type' => $animator->type ?? 'private',
+                    'images' => ['/images/placeholder.jpg'], // Упростим пока без связанных фото
+                ];
+            });
+            
+        } catch (\Exception $e) {
+            Log::error('Error loading animators for home page', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Возвращаем пустой результат в случае ошибки
+            $cards = collect([]);
+        }
+        
         return Inertia::render('Home', [
-            'cards' => $animators
+            'cards' => $cards,
+            'filters' => $request->only(['city', 'is_online', 'is_verified', 'type', 'min_price', 'max_price']),
+            'cities' => ['Москва', 'Санкт-Петербург', 'Казань', 'Екатеринбург', 'Новосибирск', 'Пермь']
         ]);
     }
 
+    /**
+     * Показать форму создания объявления
+     */
     public function create(Request $request)
     {
         // Проверяем есть ли черновик
@@ -34,11 +99,90 @@ class AnimatorController extends Controller
             'draftId' => $draft ? $draft->id : null
         ]);
     }
-    
+
+    /**
+     * Сохранить объявление
+     */
+    public function store(StoreAnimatorRequest $request)
+    {
+        try {
+            DB::beginTransaction();
+            
+            $user = Auth::user();
+            $status = $request->input('status', 'draft');
+            
+            // Подготавливаем данные
+            $data = [
+                'user_id' => $user->id,
+                'title' => $request->input('details.title'),
+                'name' => $request->input('details.title'), // Дублируем для совместимости
+                'description' => $request->input('details.description'),
+                'work_format' => $request->input('workFormat'),
+                'price_list' => $request->input('priceList'),
+                'price' => $request->input('price.value'),
+                'actions_data' => $request->input('actions'),
+                'geo_data' => $request->input('geo'),
+                'contacts_data' => $request->input('contacts'),
+                'status' => $status,
+                'city' => $request->input('geo.city'),
+                'address' => $request->input('geo.address'),
+                'phone' => $request->input('contacts.phone'),
+                'email' => $request->input('contacts.email'),
+                'specialization' => $request->input('workFormat.specialization'),
+                'type' => $request->input('workFormat.type', 'private'),
+                'quick_booking' => false,
+                'terms_accepted' => true,
+            ];
+            
+            $animator = Animator::create($data);
+            
+            // Обработка медиафайлов
+            if ($request->has('media.files') && is_array($request->input('media.files'))) {
+                foreach ($request->input('media.files') as $file) {
+                    if (isset($file['preview'])) {
+                        // Здесь должна быть логика сохранения файлов
+                        // Пока просто логируем
+                        Log::info('Media file received', ['file' => $file]);
+                    }
+                }
+            }
+            
+            DB::commit();
+            
+            $message = $status === 'draft' 
+                ? 'Черновик успешно сохранен!' 
+                : 'Объявление отправлено на модерацию!';
+            
+            if ($status === 'draft') {
+                return redirect()->route('profile.items', ['tab' => 'draft', 'filter' => 'all'])
+                    ->with('success', $message);
+            } else {
+                return redirect()->route('dashboard')
+                    ->with('success', $message);
+            }
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating animator', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return back()
+                ->withInput()
+                ->with('error', 'Произошла ошибка при сохранении. Попробуйте еще раз.');
+        }
+    }
+
+    /**
+     * Получить черновик по ID
+     */
     public function getDraft($id)
     {
         $animator = Animator::where('id', $id)
             ->where('user_id', Auth::id())
+            ->where('status', 'draft')
             ->first();
             
         if (!$animator) {
@@ -54,146 +198,40 @@ class AnimatorController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
-        try {
-            $isDraft = $request->boolean('is_draft', false);
-            
-            // Базовая валидация для черновика
-            if (!$isDraft) {
-                $request->validate([
-                    'name' => 'required|string|max:255',
-                    'description' => 'required|string',
-                    'price' => 'required|numeric|min:0',
-                    'services' => 'required|array|min:1',
-                    'terms_accepted' => 'required|accepted'
-                ]);
-            }
-            
-            $data = [
-                'user_id' => Auth::id(),
-                'city_id' => $request->city_id ?? 1,
-                'name' => $request->name,
-                'description' => $request->description,
-                'about' => $request->about,
-                'price' => $request->price,
-                'zones' => $request->zones ?? 'city',
-                'services' => $request->services ? json_encode($request->services) : null,
-                'heroes' => $request->heroes,
-                'quick_booking' => $request->boolean('quick_booking', false),
-                'terms_accepted' => $request->boolean('terms_accepted', false),
-                'status' => $isDraft ? 'draft' : 'pending'
-            ];
-            
-            $animator = Animator::create($data);
-            
-            // Обработка фотографий
-            if ($request->hasFile('photos')) {
-                foreach ($request->file('photos') as $photo) {
-                    $path = $photo->store('animators', 'public');
-                    $animator->media()->create([
-                        'path' => $path,
-                        'type' => 'photo'
-                    ]);
-                }
-            }
-            
-            return response()->json([
-                'success' => true,
-                'animator' => $animator,
-                'message' => $isDraft ? 'Черновик сохранен' : 'Объявление отправлено на модерацию'
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Error creating animator: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Произошла ошибка при сохранении'
-            ], 500);
-        }
-    }
-
-    public function update(Request $request, $id)
-    {
-        try {
-            $animator = Animator::where('id', $id)
-                ->where('user_id', Auth::id())
-                ->firstOrFail();
-                
-            $isDraft = $request->boolean('is_draft', false);
-            
-            // Валидация для публикации
-            if (!$isDraft && $animator->status === 'draft') {
-                $request->validate([
-                    'name' => 'required|string|max:255',
-                    'description' => 'required|string',
-                    'price' => 'required|numeric|min:0',
-                    'services' => 'required|array|min:1',
-                    'terms_accepted' => 'required|accepted'
-                ]);
-            }
-            
-            $data = [
-                'city_id' => $request->city_id ?? $animator->city_id,
-                'name' => $request->name,
-                'description' => $request->description,
-                'about' => $request->about,
-                'price' => $request->price,
-                'zones' => $request->zones ?? 'city',
-                'services' => $request->services ? json_encode($request->services) : $animator->services,
-                'heroes' => $request->heroes,
-                'quick_booking' => $request->boolean('quick_booking', false),
-                'terms_accepted' => $request->boolean('terms_accepted', false),
-                'status' => $request->status ?? ($isDraft ? 'draft' : 'pending')
-            ];
-            
-            $animator->update($data);
-            
-            // Обработка новых фотографий
-            if ($request->hasFile('photos')) {
-                foreach ($request->file('photos') as $photo) {
-                    $path = $photo->store('animators', 'public');
-                    $animator->media()->create([
-                        'path' => $path,
-                        'type' => 'photo'
-                    ]);
-                }
-            }
-            
-            return response()->json([
-                'success' => true,
-                'animator' => $animator,
-                'message' => $isDraft ? 'Черновик обновлен' : 'Объявление обновлено'
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Error updating animator: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Произошла ошибка при обновлении'
-            ], 500);
-        }
-    }
-    
     /**
-     * Сохранение черновика с преобразованием структуры данных
+     * Сохранить черновик через AJAX
      */
     public function saveDraft(Request $request)
     {
         try {
-            Log::info('Saving draft with data:', $request->all());
+            $user = Auth::user();
+            $draftId = $request->input('draft_id');
             
-            // Преобразуем вложенную структуру формы в плоскую
-            $data = $this->transformFormData($request->all());
-            $data['user_id'] = Auth::id();
-            $data['status'] = 'draft';
+            $data = [
+                'user_id' => $user->id,
+                'title' => $request->input('details.title'),
+                'name' => $request->input('details.title'),
+                'description' => $request->input('details.description'),
+                'work_format' => $request->input('workFormat'),
+                'price_list' => $request->input('priceList'),
+                'price' => $request->input('price.value'),
+                'actions_data' => $request->input('actions'),
+                'geo_data' => $request->input('geo'),
+                'contacts_data' => $request->input('contacts'),
+                'status' => 'draft',
+                'city' => $request->input('geo.city'),
+                'address' => $request->input('geo.address'),
+                'phone' => $request->input('contacts.phone'),
+                'email' => $request->input('contacts.email'),
+                'specialization' => $request->input('workFormat.specialization'),
+                'type' => $request->input('workFormat.type', 'private'),
+            ];
             
-            // Если есть draft_id, обновляем
-            if ($request->input('draft_id')) {
-                $animator = Animator::where('id', $request->input('draft_id'))
-                    ->where('user_id', Auth::id())
+            if ($draftId) {
+                // Обновляем существующий черновик
+                $animator = Animator::where('id', $draftId)
+                    ->where('user_id', $user->id)
+                    ->where('status', 'draft')
                     ->first();
                     
                 if ($animator) {
@@ -202,6 +240,7 @@ class AnimatorController extends Controller
                     $animator = Animator::create($data);
                 }
             } else {
+                // Создаем новый черновик
                 $animator = Animator::create($data);
             }
             
@@ -212,76 +251,122 @@ class AnimatorController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            Log::error('Error saving draft: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('Error saving draft', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage()
+            ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'Ошибка при сохранении черновика: ' . $e->getMessage()
+                'message' => 'Ошибка при сохранении черновика'
             ], 500);
         }
     }
-    
+
     /**
-     * Преобразование вложенной структуры формы в плоскую для БД
+     * Показать объявление
      */
-    private function transformFormData($formData)
+    public function show(Animator $animator)
     {
-        $data = [];
-        
-        // Основные данные из details
-        if (isset($formData['details'])) {
-            $data['title'] = $formData['details']['title'] ?? '';
-            $data['description'] = $formData['details']['description'] ?? '';
-            // name используем из title если нет отдельного поля
-            $data['name'] = $formData['details']['title'] ?? '';
+        if (!in_array($animator->status, ['published', 'active'])) {
+            abort(404);
         }
         
-        // Формат работы
-        if (isset($formData['workFormat'])) {
-            $data['specialization'] = $formData['workFormat']['specialization'] ?? '';
-            $data['type'] = $formData['workFormat']['type'] ?? 'private';
-            $data['work_format'] = json_encode($formData['workFormat']);
+        return Inertia::render('Animators/Show', [
+            'animator' => $animator
+        ]);
+    }
+
+    /**
+     * Редактировать объявление
+     */
+    public function edit(Animator $animator)
+    {
+        // Проверяем права доступа
+        if ($animator->user_id !== Auth::id()) {
+            abort(403);
         }
         
-        // Прайс-лист
-        if (isset($formData['priceList'])) {
-            $data['price_list'] = json_encode($formData['priceList']);
+        return Inertia::render('Animators/Edit', [
+            'animator' => $animator
+        ]);
+    }
+
+    /**
+     * Обновить объявление
+     */
+    public function update(Request $request, Animator $animator)
+    {
+        // Проверяем права доступа
+        if ($animator->user_id !== Auth::id()) {
+            abort(403);
         }
         
-        // Цена
-        if (isset($formData['price'])) {
-            $data['price'] = $formData['price']['value'] ?? 0;
+        try {
+            $data = [
+                'title' => $request->input('details.title'),
+                'name' => $request->input('details.title'),
+                'description' => $request->input('details.description'),
+                'work_format' => $request->input('workFormat'),
+                'price_list' => $request->input('priceList'),
+                'price' => $request->input('price.value'),
+                'actions_data' => $request->input('actions'),
+                'geo_data' => $request->input('geo'),
+                'contacts_data' => $request->input('contacts'),
+                'city' => $request->input('geo.city'),
+                'address' => $request->input('geo.address'),
+                'phone' => $request->input('contacts.phone'),
+                'email' => $request->input('contacts.email'),
+                'specialization' => $request->input('workFormat.specialization'),
+                'type' => $request->input('workFormat.type', 'private'),
+            ];
+            
+            $animator->update($data);
+            
+            return redirect()->route('profile.items', ['tab' => 'draft', 'filter' => 'all'])
+                ->with('success', 'Объявление успешно обновлено!');
+                
+        } catch (\Exception $e) {
+            Log::error('Error updating animator', [
+                'animator_id' => $animator->id,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage()
+            ]);
+            
+            return back()
+                ->withInput()
+                ->with('error', 'Произошла ошибка при обновлении.');
+        }
+    }
+
+    /**
+     * Удалить объявление
+     */
+    public function destroy(Animator $animator)
+    {
+        // Проверяем права доступа
+        if ($animator->user_id !== Auth::id()) {
+            abort(403);
         }
         
-        // Акции
-        if (isset($formData['actions'])) {
-            $data['actions_data'] = json_encode($formData['actions']);
+        try {
+            $animator->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Объявление удалено'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error deleting animator', [
+                'animator_id' => $animator->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Ошибка при удалении'
+            ], 500);
         }
-        
-        // География
-        if (isset($formData['geo'])) {
-            $data['city'] = $formData['geo']['city'] ?? '';
-            $data['address'] = $formData['geo']['address'] ?? '';
-            $data['geo_data'] = json_encode($formData['geo']);
-        }
-        
-        // Контакты
-        if (isset($formData['contacts'])) {
-            $data['phone'] = $formData['contacts']['phone'] ?? '';
-            $data['email'] = $formData['contacts']['email'] ?? '';
-            $data['contacts_data'] = json_encode($formData['contacts']);
-        }
-        
-        // Дополнительные поля для совместимости с существующей структурой БД
-        $data['age'] = $formData['age'] ?? null;
-        $data['height'] = $formData['height'] ?? null;
-        $data['weight'] = $formData['weight'] ?? null;
-        $data['rating'] = $formData['rating'] ?? 0;
-        $data['reviews'] = $formData['reviews'] ?? 0;
-        $data['is_online'] = $formData['is_online'] ?? false;
-        $data['is_verified'] = $formData['is_verified'] ?? false;
-        
-        return $data;
     }
 }

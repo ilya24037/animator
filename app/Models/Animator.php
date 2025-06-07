@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Animator extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -38,15 +39,13 @@ class Animator extends Model
         'type',
         'is_online',
         'is_verified',
-        'is_premium',        // ← Добавлено
         'image',
         'status',
         'zones',
         'services',
         'heroes',
         'quick_booking',
-        'terms_accepted',
-        'bumped_at'          // ← Добавлено
+        'terms_accepted'
     ];
 
     protected $casts = [
@@ -58,12 +57,22 @@ class Animator extends Model
         'services' => 'array',
         'is_online' => 'boolean',
         'is_verified' => 'boolean',
-        'is_premium' => 'boolean',       // ← Добавлено
         'quick_booking' => 'boolean',
         'terms_accepted' => 'boolean',
         'rating' => 'float',
         'price' => 'decimal:2',
-        'bumped_at' => 'datetime'        // ← Добавлено
+        'deleted_at' => 'datetime',
+    ];
+
+    protected $attributes = [
+        'status' => 'draft',
+        'type' => 'private',
+        'is_online' => false,
+        'is_verified' => false,
+        'quick_booking' => false,
+        'terms_accepted' => false,
+        'rating' => 4.5,
+        'reviews' => 0,
     ];
 
     /**
@@ -115,14 +124,6 @@ class Animator extends Model
     }
 
     /**
-     * Scope для премиум объявлений
-     */
-    public function scopePremium($query)
-    {
-        return $query->where('is_premium', true);
-    }
-
-    /**
      * Scope для пользователя
      */
     public function scopeForUser($query, $userId)
@@ -131,18 +132,88 @@ class Animator extends Model
     }
 
     /**
-     * Scope для города
+     * Scope по статусу
      */
-    public function scopeByCity($query, $city)
+    public function scopeStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    /**
+     * Scope по городу
+     */
+    public function scopeCity($query, $city)
     {
         return $query->where('city', $city);
     }
 
     /**
-     * Метод для поднятия объявления (bump)
+     * Scope по типу
      */
-    public function bump()
+    public function scopeType($query, $type)
     {
-        $this->update(['bumped_at' => now()]);
+        return $query->where('type', $type);
+    }
+
+    /**
+     * Scope для онлайн
+     */
+    public function scopeOnline($query)
+    {
+        return $query->where('is_online', true);
+    }
+
+    /**
+     * Scope для проверенных
+     */
+    public function scopeVerified($query)
+    {
+        return $query->where('is_verified', true);
+    }
+
+    /**
+     * Accessor для получения полного URL изображения
+     */
+    public function getImageUrlAttribute()
+    {
+        if ($this->image) {
+            return asset('storage/' . $this->image);
+        }
+        return asset('images/placeholder.jpg');
+    }
+
+    /**
+     * Accessor для получения форматированной цены
+     */
+    public function getFormattedPriceAttribute()
+    {
+        if ($this->price) {
+            return number_format($this->price, 0, '.', ' ') . ' ₽';
+        }
+        return 'Цена договорная';
+    }
+
+    /**
+     * Проверка, является ли объявление черновиком
+     */
+    public function isDraft()
+    {
+        return $this->status === 'draft';
+    }
+
+    /**
+     * Проверка, опубликовано ли объявление
+     */
+    public function isPublished()
+    {
+        return in_array($this->status, ['published', 'active']);
+    }
+
+    /**
+     * Проверка принадлежности пользователю
+     */
+    public function belongsToUser($userId)
+    {
+        return $this->user_id == $userId;
     }
 }
