@@ -18,8 +18,8 @@ use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 
 /* ─────────── Главная ─────────── */
-use App\Http\Controllers\HomeController;
-Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/', [AnimatorController::class, 'home'])->name('home');
+
 /* ─────────── Dashboard ─────────── */
 Route::get('/dashboard', fn () => Inertia::render('Dashboard'))
       ->middleware(['auth', 'verified'])
@@ -40,7 +40,11 @@ Route::middleware('auth')->group(function () {
 
     /* ─────────── Создание объявления ─────────── */
     Route::get ('/animators/create', [AnimatorController::class, 'create'])->name('animators.create');
-    Route::post('/animators',        [AnimatorController::class, 'store' ])->name('animators.store');  // ← добавлено
+    Route::post('/animators',        [AnimatorController::class, 'store' ])->name('animators.store');
+    
+    /* ─────────── ДОБАВЛЕНО: Маршрут для черновика ─────────── */
+    Route::post('/animators/draft',  [AnimatorController::class, 'saveDraft'])->name('animators.draft.save');
+    Route::get ('/animators/draft/{id}', [AnimatorController::class, 'getDraft'])->name('animators.draft.get');
 });
 
 /* ─────────── Auth (Laravel Breeze) ─────────── */

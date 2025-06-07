@@ -10,6 +10,18 @@ use Illuminate\Support\Facades\Log;
 
 class AnimatorController extends Controller
 {
+    public function home()
+    {
+        // Метод для главной страницы
+        $animators = Animator::where('status', 'published')
+            ->orWhere('status', 'active')
+            ->paginate(20);
+            
+        return Inertia::render('Home', [
+            'cards' => $animators
+        ]);
+    }
+
     public function create(Request $request)
     {
         // Проверяем есть ли черновик
@@ -165,9 +177,111 @@ class AnimatorController extends Controller
         }
     }
     
+    /**
+     * Сохранение черновика с преобразованием структуры данных
+     */
     public function saveDraft(Request $request)
     {
-        // Этот метод можно удалить, так как теперь используем store/update
-        return $this->store($request);
+        try {
+            Log::info('Saving draft with data:', $request->all());
+            
+            // Преобразуем вложенную структуру формы в плоскую
+            $data = $this->transformFormData($request->all());
+            $data['user_id'] = Auth::id();
+            $data['status'] = 'draft';
+            
+            // Если есть draft_id, обновляем
+            if ($request->input('draft_id')) {
+                $animator = Animator::where('id', $request->input('draft_id'))
+                    ->where('user_id', Auth::id())
+                    ->first();
+                    
+                if ($animator) {
+                    $animator->update($data);
+                } else {
+                    $animator = Animator::create($data);
+                }
+            } else {
+                $animator = Animator::create($data);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'animator' => $animator,
+                'message' => 'Черновик сохранен'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error saving draft: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Ошибка при сохранении черновика: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Преобразование вложенной структуры формы в плоскую для БД
+     */
+    private function transformFormData($formData)
+    {
+        $data = [];
+        
+        // Основные данные из details
+        if (isset($formData['details'])) {
+            $data['title'] = $formData['details']['title'] ?? '';
+            $data['description'] = $formData['details']['description'] ?? '';
+            // name используем из title если нет отдельного поля
+            $data['name'] = $formData['details']['title'] ?? '';
+        }
+        
+        // Формат работы
+        if (isset($formData['workFormat'])) {
+            $data['specialization'] = $formData['workFormat']['specialization'] ?? '';
+            $data['type'] = $formData['workFormat']['type'] ?? 'private';
+            $data['work_format'] = json_encode($formData['workFormat']);
+        }
+        
+        // Прайс-лист
+        if (isset($formData['priceList'])) {
+            $data['price_list'] = json_encode($formData['priceList']);
+        }
+        
+        // Цена
+        if (isset($formData['price'])) {
+            $data['price'] = $formData['price']['value'] ?? 0;
+        }
+        
+        // Акции
+        if (isset($formData['actions'])) {
+            $data['actions_data'] = json_encode($formData['actions']);
+        }
+        
+        // География
+        if (isset($formData['geo'])) {
+            $data['city'] = $formData['geo']['city'] ?? '';
+            $data['address'] = $formData['geo']['address'] ?? '';
+            $data['geo_data'] = json_encode($formData['geo']);
+        }
+        
+        // Контакты
+        if (isset($formData['contacts'])) {
+            $data['phone'] = $formData['contacts']['phone'] ?? '';
+            $data['email'] = $formData['contacts']['email'] ?? '';
+            $data['contacts_data'] = json_encode($formData['contacts']);
+        }
+        
+        // Дополнительные поля для совместимости с существующей структурой БД
+        $data['age'] = $formData['age'] ?? null;
+        $data['height'] = $formData['height'] ?? null;
+        $data['weight'] = $formData['weight'] ?? null;
+        $data['rating'] = $formData['rating'] ?? 0;
+        $data['reviews'] = $formData['reviews'] ?? 0;
+        $data['is_online'] = $formData['is_online'] ?? false;
+        $data['is_verified'] = $formData['is_verified'] ?? false;
+        
+        return $data;
     }
 }
