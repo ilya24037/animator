@@ -19,7 +19,7 @@ export const useAnimatorFormStore = defineStore('animatorForm', () => {
     form.status = draft.status || 'draft'
   }
 
-  // Метод автосохранения (PATCH или POST в зависимости от draft)
+  // Метод автосохранения (PUT или POST в зависимости от draft)
   async function autoSave() {
     isSaving.value = true
     saveError.value = null
@@ -27,7 +27,7 @@ export const useAnimatorFormStore = defineStore('animatorForm', () => {
     try {
       // если есть id — обновить, иначе создать черновик
       if (form.id) {
-        await router.patch(`/animators/${form.id}`, { ...form, status: 'draft' }, { preserveState: true })
+        await router.put(`/animators/${form.id}`, { ...form, status: 'draft' }, { preserveState: true })
       } else {
         const res = await router.post('/animators', { ...form, status: 'draft' }, { preserveState: true })
         if (res?.props?.item?.id) {
@@ -53,7 +53,7 @@ export const useAnimatorFormStore = defineStore('animatorForm', () => {
       let response
       // Если уже есть id — обновить (PUT), иначе создать (POST)
       if (form.id) {
-        response = await router.patch(`/animators/${form.id}`, { ...form, status }, { preserveState: true })
+        response = await router.put(`/animators/${form.id}`, { ...form, status }, { preserveState: true })
       } else {
         response = await router.post('/animators', { ...form, status }, { preserveState: true })
         if (response?.props?.item?.id) {

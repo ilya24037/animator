@@ -18,6 +18,7 @@ use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 
+
 /* ─────────── Главная ─────────── */
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -29,48 +30,45 @@ Route::get('/dashboard', fn () => Inertia::render('Dashboard'))
 /* ─────────── Профиль + личные объявления ─────────── */
 Route::middleware('auth')->group(function () {
 
-    /* профиль */
+    // Профиль пользователя
     Route::get   ('/profile',  [ProfileController::class, 'edit'   ])->name('profile.edit');
     Route::patch ('/profile',  [ProfileController::class, 'update' ])->name('profile.update');
     Route::delete('/profile',  [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    /* список объявлений (Avito-style вкладки) */
+    // Список объявлений с вкладками Avito-style
     Route::get('/profile/items/{tab}/{filter?}', [ItemsController::class, 'index'])
         ->where('tab', 'draft|pending|published|inactive|old')
         ->name('profile.items');
-    
+
     // Короткий редирект для удобства
-    Route::get('/profile/items', function() {
-        return redirect()->route('profile.items', ['tab' => 'draft', 'filter' => 'all']);
-    });
+    Route::get('/profile/items', fn () =>
+        redirect()->route('profile.items', ['tab' => 'draft', 'filter' => 'all'])
+    );
 
     /* ─────────── Создание и управление объявлениями ─────────── */
+    // Создание объявления (GET)
     Route::get ('/animators/create', [AnimatorController::class, 'create'])->name('animators.create');
+    // Сохранение нового (POST)
     Route::post('/animators',        [AnimatorController::class, 'store' ])->name('animators.store');
+    // Редактирование (GET)
     Route::get('/animators/{animator}/edit', [AnimatorController::class, 'edit'])->name('animators.edit');
+    // Обновление (PUT)
     Route::put('/animators/{animator}', [AnimatorController::class, 'update'])->name('animators.update');
+    // Удаление (DELETE)
     Route::delete('/animators/{animator}', [AnimatorController::class, 'destroy'])->name('animators.destroy');
-    
+
     /* ─────────── AJAX маршруты для черновиков ─────────── */
-    Route::get('/animators/draft/{id}', [AnimatorController::class, 'getDraft'])->name('animators.getDraft');
-    Route::post('/animators/draft', [AnimatorController::class, 'saveDraft'])->name('animators.saveDraft');
+    Route::get ('/animators/draft/{id}', [AnimatorController::class, 'getDraft'])->name('animators.getDraft');
+    Route::post('/animators/draft',      [AnimatorController::class, 'saveDraft'])->name('animators.saveDraft');
+    Route::post('/animators/publish',    [AnimatorController::class, 'publish'])->name('animators.publish');
 });
 
-
-// API маршруты для работы с черновиками
-Route::middleware(['auth'])->prefix('api')->group(function () {
-    Route::post('/animators/draft', [AnimatorController::class, 'saveDraft']);
-    Route::post('/animators/publish', [AnimatorController::class, 'publish']);
-    Route::get('/animators/draft/{id}', [AnimatorController::class, 'getDraft']);
-});
-
-/* ─────────── Публичные маршруты для объявлений ─────────── */
+// Публичные маршруты для объявлений
 Route::get('/animators/{animator}', [AnimatorController::class, 'show'])->name('animators.show');
 
 /* ─────────── Auth (Laravel Breeze) ─────────── */
 Route::get('/register', [RegisteredUserController::class, 'create'])->middleware('guest')->name('register');
 Route::post('/register', [RegisteredUserController::class, 'store'])->middleware('guest');
-
 Route::get ('/login',  [AuthenticatedSessionController::class, 'create'])->middleware('guest')->name('login');
 Route::post('/login',  [AuthenticatedSessionController::class, 'store' ])->middleware('guest');
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->middleware('auth')->name('logout');
@@ -88,4 +86,4 @@ Route::get ('/confirm-password', [ConfirmablePasswordController::class, 'show' ]
 Route::post('/confirm-password', [ConfirmablePasswordController::class, 'store'])->middleware('auth');
 Route::put ('/password',         [PasswordController::class,          'update'])->middleware('auth')->name('password.update');
 
-// require __DIR__.'/auth.php'; // Эта строка дублирует маршруты выше, можно убрать
+// require __DIR__.'/auth.php'; // Дублирует маршруты выше — не требуется
