@@ -4,14 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- Заголовок, который меняется через @inertiaHead --}}
+    {{-- Заголовок страницы, который Inertia может менять динамически --}}
     <title inertia>{{ config('app.name', 'Animatorr') }}</title>
 
-    {{-- 🔑  CSRF-токен — Axios забирает его из этого meta-тега  --}}
+    {{-- CSRF-токен для Axios --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    {{-- Vite + Inertia --}}
+    {{-- 🔑  Ziggy: список всех именованных маршрутов Laravel --}}
+    @routes
+
+    {{-- Vite-бандл (Vue + Inertia) --}}
     @vite('resources/js/app.js')
+
+    {{-- Inertia — метаданные страницы --}}
     @inertiaHead
 </head>
 <body class="font-sans antialiased text-gray-900">
