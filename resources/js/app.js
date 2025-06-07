@@ -6,7 +6,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createApp, h } from 'vue'
 import { ZiggyVue } from '../../vendor/tightenco/ziggy'
 import { createPinia } from 'pinia'
-★ import errorPath from './directives/errorPath.js'    // <- ваша директива
+import errorPath from './directives/errorPath.js'    // <- ваша директива
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel'
 
@@ -19,7 +19,7 @@ createInertiaApp({
       .use(plugin)
       .use(ZiggyVue)
       .use(pinia)
-★     .directive('error-path', errorPath)              // <- регистрируем глобально
+     .directive('error-path', errorPath)              // <- регистрируем глобально
       .mount(el)
   },
   /* … */
