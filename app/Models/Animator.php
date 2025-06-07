@@ -38,13 +38,15 @@ class Animator extends Model
         'type',
         'is_online',
         'is_verified',
+        'is_premium',        // ← Добавлено
         'image',
         'status',
         'zones',
         'services',
         'heroes',
         'quick_booking',
-        'terms_accepted'
+        'terms_accepted',
+        'bumped_at'          // ← Добавлено
     ];
 
     protected $casts = [
@@ -56,10 +58,12 @@ class Animator extends Model
         'services' => 'array',
         'is_online' => 'boolean',
         'is_verified' => 'boolean',
+        'is_premium' => 'boolean',       // ← Добавлено
         'quick_booking' => 'boolean',
         'terms_accepted' => 'boolean',
         'rating' => 'float',
-        'price' => 'decimal:2'
+        'price' => 'decimal:2',
+        'bumped_at' => 'datetime'        // ← Добавлено
     ];
 
     /**
@@ -103,10 +107,42 @@ class Animator extends Model
     }
 
     /**
+     * Scope для активных
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    /**
+     * Scope для премиум объявлений
+     */
+    public function scopePremium($query)
+    {
+        return $query->where('is_premium', true);
+    }
+
+    /**
      * Scope для пользователя
      */
     public function scopeForUser($query, $userId)
     {
         return $query->where('user_id', $userId);
+    }
+
+    /**
+     * Scope для города
+     */
+    public function scopeByCity($query, $city)
+    {
+        return $query->where('city', $city);
+    }
+
+    /**
+     * Метод для поднятия объявления (bump)
+     */
+    public function bump()
+    {
+        $this->update(['bumped_at' => now()]);
     }
 }

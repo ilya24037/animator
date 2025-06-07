@@ -1,10 +1,8 @@
 <?php
-// app/Http/Controllers/HomeController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Animator;
-use App\Models\Card;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,83 +10,126 @@ class HomeController extends Controller
 {
     public function index(Request $request)
     {
-        // Получаем город
-        $city = $request->get('city', session('city', 'Москва'));
+        // Получаем параметры фильтрации
+        $city = $request->get('city', 'Москва');
+        $type = $request->get('type');
+        $isOnline = $request->boolean('is_online');
+        $isVerified = $request->boolean('is_verified');
+        $minPrice = $request->get('min_price');
+        $maxPrice = $request->get('max_price');
         
-        // Строим запрос
-        $query = Animator::where('status', 'active');
+        // Базовый запрос
+        $query = Animator::query()
+            ->where('status', 'active')
+            ->where('city', $city);
         
         // Применяем фильтры
-        if ($city && $city !== 'Все города') {
-            $query->where('city', $city);
-        }
-        
-        if ($request->boolean('is_online')) {
-            $query->where('is_online', true);
-        }
-        
-        if ($request->boolean('is_verified')) {
-            $query->where('is_verified', true);
-        }
-        
-        if ($type = $request->get('type')) {
+        if ($type) {
             $query->where('type', $type);
         }
         
-        if ($minPrice = $request->get('min_price')) {
+        if ($isOnline) {
+            $query->where('is_online', true);
+        }
+        
+        if ($isVerified) {
+            $query->where('is_verified', true);
+        }
+        
+        if ($minPrice) {
             $query->where('price', '>=', $minPrice);
         }
         
-        if ($maxPrice = $request->get('max_price')) {
+        if ($maxPrice) {
             $query->where('price', '<=', $maxPrice);
         }
         
-        // Получаем аниматоров
-        $animators = $query->with('media')
-                          ->orderBy('is_premium', 'desc')
-                          ->orderBy('bumped_at', 'desc')
-                          ->orderBy('created_at', 'desc')
-                          ->paginate(20);
+        // Сортировка: сначала премиум, потом поднятые, потом новые
+        $animators = $query
+            ->orderByDesc('is_premium')
+            ->orderByDesc('bumped_at')
+            ->orderByDesc('created_at')
+            ->paginate(20);
         
-        // Форматируем для отображения
+        // Преобразуем данные для фронтенда
         $cards = $animators->map(function ($animator) {
             return [
                 'id' => $animator->id,
-                'name' => $animator->name ?: $animator->title ?: 'Без имени',
-                'price' => $animator->price ?: 0,
-                'city' => $animator->city ?: 'Не указан',
+                'name' => $animator->name,
                 'age' => $animator->age,
                 'height' => $animator->height,
                 'weight' => $animator->weight,
-                'rating' => $animator->rating ?: 4.5,
-                'reviews' => $animator->reviews ?: 0,
-                'image' => $animator->image ? asset('storage/' . $animator->image) : '/images/default-avatar.jpg',
-                'images' => $animator->media()
-                    ->where('type', 'photo')
-                    ->pluck('path')
-                    ->map(fn($path) => asset('storage/' . $path))
-                    ->toArray(),
+                'price' => $animator->price,
+                'rating' => $animator->rating,
+                'reviews' => $animator->reviews,
+                'city' => $animator->city,
                 'type' => $animator->type,
                 'is_online' => $animator->is_online,
                 'is_verified' => $animator->is_verified,
+                'is_premium' => $animator->is_premium,
+                'image' => $animator->image,
+                'images' => $this->getAnimatorImages($animator),
             ];
         });
         
-        // Получаем список городов
-        $cities = Animator::where('status', 'active')
-                         ->whereNotNull('city')
-                         ->distinct()
-                         ->pluck('city')
-                         ->filter()
-                         ->sort()
-                         ->values()
-                         ->toArray();
-        
         return Inertia::render('Home', [
             'cards' => $cards,
-            'filters' => $request->only(['city', 'is_online', 'is_verified', 'type', 'min_price', 'max_price']),
-            'cities' => $cities,
-            'userCity' => $city,
+            'filters' => [
+                'city' => $city,
+                'type' => $type,
+                'is_online' => $isOnline,
+                'is_verified' => $isVerified,
+                'min_price' => $minPrice,
+                'max_price' => $maxPrice,
+            ],
+            'cities' => $this->getCitiesList(),
+            'pagination' => [
+                'current_page' => $animators->currentPage(),
+                'last_page' => $animators->lastPage(),
+                'per_page' => $animators->perPage(),
+                'total' => $animators->total(),
+            ]
         ]);
+    }
+    
+    /**
+     * Получить список изображений аниматора
+     */
+    private function getAnimatorImages($animator)
+    {
+        // Если есть загруженные медиафайлы
+        if ($animator->media && $animator->media->count() > 0) {
+            return $animator->media->map(function ($media) {
+                return asset('storage/' . $media->path);
+            })->toArray();
+        }
+        
+        // Если есть старое поле image
+        if ($animator->image && $animator->image !== 'default.jpg') {
+            return [asset('storage/animators/' . $animator->image)];
+        }
+        
+        // Возвращаем пустой массив - компонент покажет заглушку
+        return [];
+    }
+    
+    /**
+     * Получить список городов
+     */
+    private function getCitiesList()
+    {
+        return [
+            'Москва',
+            'Санкт-Петербург', 
+            'Казань',
+            'Екатеринбург',
+            'Новосибирск',
+            'Краснодар',
+            'Нижний Новгород',
+            'Ростов-на-Дону',
+            'Челябинск',
+            'Пермь',
+            'Самара'
+        ];
     }
 }
