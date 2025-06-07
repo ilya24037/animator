@@ -237,25 +237,39 @@ class AnimatorSeeder extends Seeder
                 'Антицеллюлитный массаж',
                 'Лимфодренажный массаж',
                 'Спортивный массаж',
-                'Расслабляющий массаж'
+                'Расслабляющий массаж',
+                'Медовый массаж',
+                'Баночный массаж',
+                'Тайский массаж'
             ],
             'Спа-процедуры' => [
                 'Обертывание',
                 'Стоун-терапия',
                 'Ароматерапия',
-                'Скрабирование'
+                'Скрабирование',
+                'Гидромассаж',
+                'Парафинотерапия'
             ],
             'Косметология' => [
                 'Чистка лица',
                 'Пилинг',
                 'Массаж лица',
-                'Маска для лица'
+                'Маска для лица',
+                'Мезотерапия'
             ]
         ];
 
         $items = [];
         $availableServices = $services[$specialization] ?? $services['Массаж'];
-        $selectedServices = $faker->randomElements($availableServices, $faker->numberBetween(3, 5));
+        
+        // Определяем максимальное количество услуг, но не больше чем есть в массиве
+        $maxServices = min(count($availableServices), 5);
+        $minServices = min(3, $maxServices);
+        
+        $selectedServices = $faker->randomElements(
+            $availableServices, 
+            $faker->numberBetween($minServices, $maxServices)
+        );
 
         foreach ($selectedServices as $service) {
             $items[] = [
