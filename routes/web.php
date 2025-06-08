@@ -19,6 +19,27 @@ use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 
 
+// Новая форма создания объявления Avito-style
+Route::middleware('auth')->group(function () {
+    // Страница создания
+    Route::get('/create-ad', [AnimatorController::class, 'createAvito'])->name('create-ad');
+    
+    // API маршруты для AJAX
+    Route::prefix('api')->group(function () {
+        // Черновики
+        Route::get('/animators/draft/{id}', [AnimatorController::class, 'getDraftAjax']);
+        Route::post('/animators', [AnimatorController::class, 'storeAjax']);
+        Route::put('/animators/{id}', [AnimatorController::class, 'storeAjax']);
+        
+        // Категории
+        Route::get('/categories', function () {
+            return response()->json(app(AnimatorController::class)->getCategories());
+        });
+        
+        // Города
+        Route::get('/cities', function () {
+            return response()->json(app(AnimatorController::class)->getCitiesWithIds());
+
 /* ─────────── Главная ─────────── */
 Route::get('/', [HomeController::class, 'index'])->name('home');
 

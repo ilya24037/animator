@@ -5,6 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+// Добавьте в fillable массив
+protected $fillable = [
+    'animator_id',
+    'path',
+    'type',
+    'uuid',
+    'order' // Добавить это поле
+];
+
+// Добавьте scope для сортировки
+public function scopeOrdered($query)
+{
+    return $query->orderBy('order', 'asc');
+}
+
 class Media extends Model
 {
     use HasFactory;

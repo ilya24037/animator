@@ -67,14 +67,14 @@
       >
         Войти
       </a>
-      <!-- ▲▲▲ ДОБАВЛЕННАЯ КНОПКА ▲▲▲ -->
-
-<button
-  class="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-5 py-2 ml-2 w-[230px] h-[38px] flex items-center justify-center"
-  @click="goToCreate"
+      
+<!-- Добавьте эту кнопку в Navbar -->
+<Link
+  :href="route('create-ad')"
+  class="bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg px-6 py-2 transition"
 >
-          Разместить объявление
-        </button>
+  + Разместить объявление
+</Link>
 
 </div>
     </div>
