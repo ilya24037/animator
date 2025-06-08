@@ -8,13 +8,13 @@ use Illuminate\Http\JsonResponse;
 
 class CategoryApiController extends Controller
 {
-    public function index(): JsonResponse
-    {
-        return response()->json(
-            Category::query()
-                ->select('id', 'name')
-                ->orderBy('name')
-                ->get()
-        );
-    }
+  public function index(): JsonResponse
+{
+    return response()->json([
+        'success' => true,
+        'data' => Category::query()
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get()
+    ]);
 }

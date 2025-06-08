@@ -76,9 +76,10 @@ Route::middleware('auth')->group(function () {
         Route::put('/animators/{id}', [AnimatorController::class, 'storeAjax']);
         
         // Категории
-        Route::get('/categories', function () {
-            return response()->json(app(AnimatorController::class)->getCategories());
-        });
+        // ❗❗❗ Ошибочный маршрут удалён/закомментирован ❗❗❗
+        // Route::get('/categories', function () {
+        //     return response()->json(app(AnimatorController::class)->getCategories());
+        // });
         
         // Города
         Route::get('/cities', function () {
@@ -118,4 +119,4 @@ Route::middleware('auth')->group(function () {
     Route::get('/confirm-password', [ConfirmablePasswordController::class, 'show'])->name('password.confirm');
     Route::post('/confirm-password', [ConfirmablePasswordController::class, 'store']);
     Route::put('/password', [PasswordController::class, 'update'])->name('password.update');
-});
+});  
