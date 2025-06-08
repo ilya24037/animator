@@ -34,7 +34,7 @@
               <transition name="fade" mode="out-in">
                 <component 
                   :is="currentStepComponent" 
-                  v-model:form="store.form"
+                  v-model:form="store.formData"
                   :errors="errors"
                   ref="stepRef"
                 />
@@ -91,7 +91,7 @@
           <!-- Правая колонка - превью и подсказки -->
           <div class="space-y-6">
             <!-- Превью объявления -->
-            <AdPreview :data="store.form" />
+            <AdPreview :data="store.formData" />
             
             <!-- Подсказки -->
             <HelpBlock :step="currentStep" />
@@ -113,7 +113,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, inject } from 'vue'
 import { useAnimatorStore } from '@/Stores/AnimatorStore'
 import { router } from '@inertiajs/vue3'
 import { debounce } from 'lodash'
@@ -168,29 +168,31 @@ const currentStepComponent = computed(() => {
 })
 
 const canProceed = computed(() => {
+  const form = store.formData || {}
   const step = steps.find(s => s.id === currentStep.value)
   if (!step.required) return true
   
   // Валидация в зависимости от шага
   switch (currentStep.value) {
-    case 1: return store.form.category_id && store.form.subcategory_id
-    case 2: return store.form.name && store.form.description
-    case 3: return store.form.services?.length > 0
-    case 5: return store.form.price > 0
-    case 6: return store.form.city_id && store.form.zones
-    case 7: return store.form.phone
+    case 1: return form.category_id && form.subcategory_id
+    case 2: return form.name && form.description
+    case 3: return form.services?.length > 0
+    case 5: return form.price > 0 || form.price_type === 'free'
+    case 6: return form.city_id && form.zones
+    case 7: return form.phone
     default: return true
   }
 })
 
 const isFormValid = computed(() => {
-  return store.form.name && 
-         store.form.description && 
-         store.form.services?.length > 0 &&
-         store.form.price > 0 &&
-         store.form.city_id &&
-         store.form.phone &&
-         store.form.terms_accepted
+  const form = store.formData || {}
+  return form.name &&
+         form.description &&
+         form.services?.length > 0 &&
+         (form.price > 0 || form.price_type === 'free') &&
+         form.city_id &&
+         form.phone &&
+         form.terms_accepted
 })
 
 // Автосохранение
@@ -201,14 +203,13 @@ const debouncedSave = debounce(() => {
 }, 2000)
 
 // Watchers
-watch(() => store.form, () => {
+watch(() => store.formData, () => {
   debouncedSave()
 }, { deep: true })
 
 // Навигация по шагам
 function nextStep() {
   if (canProceed.value && currentStep.value < steps.length) {
-    // Валидация текущего шага
     if (validateCurrentStep()) {
       currentStep.value++
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -255,7 +256,6 @@ async function publish() {
 
 async function deleteDraft() {
   if (confirm('Удалить черновик? Это действие нельзя отменить.')) {
-    // Реализация удаления
     store.resetForm()
     router.visit('/profile/items/draft/all')
   }
@@ -268,7 +268,8 @@ function confirmExit() {
 
 // Перехват закрытия страницы
 function handleBeforeUnload(e) {
-  if (store.form.name || store.form.description) {
+  const form = store.formData || {}
+  if (form.name || form.description) {
     e.preventDefault()
     e.returnValue = ''
   }
@@ -276,7 +277,6 @@ function handleBeforeUnload(e) {
 
 // Уведомления
 function showNotification(type, message) {
-  // Используем inject из AppLayout
   const toast = inject('showToast')
   if (toast) {
     toast(type, message)
@@ -285,23 +285,16 @@ function showNotification(type, message) {
 
 // Lifecycle
 onMounted(() => {
-  // Загрузка черновика если есть
   if (props.draftId) {
     store.loadDraft(props.draftId)
   }
-  
-  // Перехват закрытия
   window.addEventListener('beforeunload', handleBeforeUnload)
-  
-  // Горячие клавиши
   document.addEventListener('keydown', handleKeyboard)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
   document.removeEventListener('keydown', handleKeyboard)
-  
-  // Финальное сохранение
   store.saveDraft()
 })
 

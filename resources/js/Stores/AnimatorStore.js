@@ -40,7 +40,7 @@ export const useAnimatorStore = defineStore('animator', {
       // Контакты
       phone: '',
       contact_name: '',
-      contact_methods: ['phone', 'message'], // phone, message, whatsapp
+      contact_methods: ['phone', 'message'],
       show_in_messages: true,
       
       // Дополнительно
@@ -69,14 +69,11 @@ export const useAnimatorStore = defineStore('animator', {
   }),
   
   getters: {
-    // Проверка заполненности формы
     isFormEmpty: (state) => {
       return !state.formData.name && 
              !state.formData.description && 
              state.formData.services.length === 0
     },
-    
-    // Прогресс заполнения
     completionProgress: (state) => {
       let completed = 0
       const total = 8
@@ -92,8 +89,6 @@ export const useAnimatorStore = defineStore('animator', {
       
       return Math.round((completed / total) * 100)
     },
-    
-    // Готовность к публикации
     canPublish: (state) => {
       return state.formData.category_id &&
              state.formData.subcategory_id &&
@@ -108,47 +103,35 @@ export const useAnimatorStore = defineStore('animator', {
   },
   
   actions: {
-    // Сброс формы
     resetForm() {
       this.draftId = null
       this.isSaving = false
       this.lastSaved = null
       this.saveError = null
-      
-      // Очистка медиафайлов
       this.formData.photos.forEach(photo => {
         if (photo.preview) {
           URL.revokeObjectURL(photo.preview)
         }
       })
-      
-      // Сброс данных формы
       Object.assign(this.formData, this.$state.formData)
     },
-    
-    // Загрузка черновика
     async loadDraft(id) {
       try {
         const response = await axios.get(`/api/animators/draft/${id}`)
         if (response.data.success) {
           this.draftId = id
           const draft = response.data.data
-          
-          // Заполнение формы данными черновика
           Object.keys(draft).forEach(key => {
             if (key in this.formData) {
               this.formData[key] = draft[key]
             }
           })
-          
-          // Восстановление превью фото
           if (this.formData.photos?.length > 0) {
             this.formData.photos = this.formData.photos.map(photo => ({
               ...photo,
               preview: photo.url || photo.preview
             }))
           }
-          
           return true
         }
       } catch (error) {
@@ -157,19 +140,14 @@ export const useAnimatorStore = defineStore('animator', {
         return false
       }
     },
-    
-    // Сохранение черновика
     async saveDraft() {
       if (this.isSaving || this.isFormEmpty) return false
-      
       this.isSaving = true
       this.saveError = null
-      
       try {
         const formData = this.prepareFormData()
         formData.append('is_draft', 'true')
         formData.append('status', 'draft')
-        
         let response
         if (this.draftId) {
           formData.append('_method', 'PUT')
@@ -181,7 +159,6 @@ export const useAnimatorStore = defineStore('animator', {
             headers: { 'Content-Type': 'multipart/form-data' }
           })
         }
-        
         if (response.data.success) {
           if (!this.draftId) {
             this.draftId = response.data.data.id
@@ -197,19 +174,14 @@ export const useAnimatorStore = defineStore('animator', {
         this.isSaving = false
       }
     },
-    
-    // Публикация объявления
     async publish() {
       if (!this.canPublish) return false
-      
       this.isSaving = true
       this.saveError = null
-      
       try {
         const formData = this.prepareFormData()
         formData.append('is_draft', 'false')
         formData.append('status', 'pending')
-        
         let response
         if (this.draftId) {
           formData.append('_method', 'PUT')
@@ -221,7 +193,6 @@ export const useAnimatorStore = defineStore('animator', {
             headers: { 'Content-Type': 'multipart/form-data' }
           })
         }
-        
         if (response.data.success) {
           this.resetForm()
           return true
@@ -237,12 +208,8 @@ export const useAnimatorStore = defineStore('animator', {
         this.isSaving = false
       }
     },
-    
-    // Подготовка данных для отправки
     prepareFormData() {
       const formData = new FormData()
-      
-      // Простые поля
       const simpleFields = [
         'category_id', 'subcategory_id', 'name', 'description',
         'price', 'price_type', 'price_unit', 'city_id', 'address',
@@ -250,14 +217,11 @@ export const useAnimatorStore = defineStore('animator', {
         'quick_booking', 'online_service', 'home_visit',
         'youtube_url', 'specialization'
       ]
-      
       simpleFields.forEach(field => {
         if (this.formData[field] !== null && this.formData[field] !== undefined) {
           formData.append(field, this.formData[field])
         }
       })
-      
-      // Массивы
       if (this.formData.services.length > 0) {
         this.formData.services.forEach((service, index) => {
           if (typeof service === 'object') {
@@ -268,20 +232,16 @@ export const useAnimatorStore = defineStore('animator', {
           }
         })
       }
-      
       if (this.formData.districts.length > 0) {
         this.formData.districts.forEach((district, index) => {
           formData.append(`districts[${index}]`, district)
         })
       }
-      
       if (this.formData.contact_methods.length > 0) {
         this.formData.contact_methods.forEach((method, index) => {
           formData.append(`contact_methods[${index}]`, method)
         })
       }
-      
-      // Фотографии
       if (this.formData.photos.length > 0) {
         this.formData.photos.forEach((photo, index) => {
           if (photo.file) {
@@ -291,8 +251,6 @@ export const useAnimatorStore = defineStore('animator', {
           }
         })
       }
-      
-      // Расписание
       if (this.formData.schedule.enabled) {
         formData.append('schedule[enabled]', '1')
         Object.keys(this.formData.schedule.days).forEach(day => {
@@ -302,25 +260,18 @@ export const useAnimatorStore = defineStore('animator', {
           formData.append(`schedule[days][${day}][to]`, dayData.to)
         })
       }
-      
-      // Флаги
       formData.append('show_in_messages', this.formData.show_in_messages ? '1' : '0')
       formData.append('terms_accepted', this.formData.terms_accepted ? '1' : '0')
-      
       return formData
     },
-    
-    // Валидация шага
     validateStep(stepNumber) {
       const errors = {}
-      
       switch (stepNumber) {
-        case 1: // Категория
+        case 1:
           if (!this.formData.category_id) errors.category_id = 'Выберите категорию'
           if (!this.formData.subcategory_id) errors.subcategory_id = 'Выберите подкатегорию'
           break
-          
-        case 2: // Описание
+        case 2:
           if (!this.formData.name) errors.name = 'Укажите название'
           if (this.formData.name && this.formData.name.length < 3) {
             errors.name = 'Название слишком короткое'
@@ -330,35 +281,28 @@ export const useAnimatorStore = defineStore('animator', {
             errors.description = 'Описание слишком короткое'
           }
           break
-          
-        case 3: // Услуги
+        case 3:
           if (this.formData.services.length === 0) {
             errors.services = 'Добавьте хотя бы одну услугу'
           }
           break
-          
-        case 5: // Цена
+        case 5:
           if (!this.formData.price && this.formData.price_type !== 'free') {
             errors.price = 'Укажите цену'
           }
           break
-          
-        case 6: // Локация
+        case 6:
           if (!this.formData.city_id) errors.city_id = 'Выберите город'
           break
-          
-        case 7: // Контакты
+        case 7:
           if (!this.formData.phone) errors.phone = 'Укажите телефон'
           if (this.formData.phone && !this.validatePhone(this.formData.phone)) {
             errors.phone = 'Неверный формат телефона'
           }
           break
       }
-      
       return errors
     },
-    
-    // Валидация телефона
     validatePhone(phone) {
       const cleaned = phone.replace(/\D/g, '')
       return cleaned.length === 11 && cleaned.startsWith('7')
